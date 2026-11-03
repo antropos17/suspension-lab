@@ -16,7 +16,10 @@ test('wheel torque propels the car and brakes reduce its speed',()=>{
 });
 test('suspension changes actual travel; rough-track simulation remains finite',()=>{
   const soft=createSimulation({frequency:1.5}),firm=createSimulation({frequency:6});run(soft,5);run(firm,5);
-  assert.ok(Math.abs(soft.joints[0].getJointTranslation())>Math.abs(firm.joints[0].getJointTranslation())*2);
+  // Preload holds the same ride height. Compare response to an added load.
+  const baseSoft=soft.joints[0].getJointTranslation(),baseFirm=firm.joints[0].getJointTranslation();
+  for(let i=0;i<2/STEP;i++){for(const s of [soft,firm]){s.body.applyForceToCenter({x:0,y:-1000},true);s.step();}}
+  assert.ok(soft.joints[0].getJointTranslation()-baseSoft>(firm.joints[0].getJointTranslation()-baseFirm)*2);
   firm.tune(3.2,.65);run(firm,25,1);
   assert.ok(firm.body.getPosition().x>50);
   for(const b of [firm.body,...firm.wheels]) {const p=b.getPosition();assert.ok(Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.y>-3);}
@@ -69,7 +72,7 @@ for (const drive of ['awd','fwd','rwd']) {
  }
  }
  assert.ok(s.body.getPosition().x>=263,`${drive} completes the rough trail`);
- assert.ok(contacts>0,`${drive} actually contacts the liners`);
+ assert.ok(contacts<120,`${drive} liners should not act as the primary suspension spring`);
  assert.ok(minGap>=0,`${drive} tire crosses the visible arch: ${minGap}`);
  assert.ok(maxTravel<.281,`${drive} exceeds the suspension stop`);
 }

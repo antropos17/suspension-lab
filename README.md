@@ -22,6 +22,8 @@ Reference: https://piqnt.dev/planck.js/docs/joint/distance-joint.html (spring fr
 
 ## Develop
 
+The revised suspension uses supported axle mass, static preload, asymmetric damping with blow-off and progressive bump/droop buffers. Smaller rims move independently within the compliant tire. An older-diesel exhaust effect responds to accelerator transients and measured drive load, with slowly accumulating tailpipe soot. See `docs/VEHICLE-MODEL.md` for equations, research sources, measurements and limitations.
+
 Node.js 22 or newer. Run `npm ci`, `npm test`, `npm run lint`, `npm run build`. Source lives in `src`; static interface and bundled output live in `dist`. Dependencies are pinned in `package-lock.json`. Rebuild after source edits.
 
 ## Storage
