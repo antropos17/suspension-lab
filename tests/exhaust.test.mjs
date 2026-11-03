@@ -23,3 +23,17 @@ test('soot slider controls emission and zero stops new particles',()=>{
   assert.ok(high.particles.length>low.particles.length*3);
   assert.ok(high.soot>low.soot);
 });
+
+test('billows spread, linger after fuel cut, then completely dissipate',()=>{
+  let seed=17;
+  const effect=createExhaust(()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;});
+  for(let i=0;i<480;i++)effect.step(simulation(1,1),1/120);
+  effect.setIntensity(0);
+  for(let i=0;i<240;i++)effect.step(simulation(0,0),1/120);
+  assert.ok(effect.particles.length>30,'cloud remains after throttle release');
+  const ys=effect.particles.map(p=>p.y),xs=effect.particles.map(p=>p.x);
+  assert.ok(Math.max(...ys)-Math.min(...ys)>.7,'plume has vertical spread, not a straight jet');
+  assert.ok(Math.max(...xs)-Math.min(...xs)>.8,'eddies disperse the cloud horizontally');
+  for(let i=0;i<960;i++)effect.step(simulation(0,0),1/120);
+  assert.equal(effect.particles.length,0,'old smoke cannot accumulate forever');
+});
