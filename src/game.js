@@ -1,6 +1,6 @@
 import { createSimulation, FINISH, STEP } from './physics.js';
 import { createExhaust } from './exhaust.js';
-import { groundedTirePoint } from './wheel-shape.js';
+import { TIRE_RADIUS } from './pneumatic-tire.js';
 import { groundHeight } from './terrain.js';
 import { drawClassicBody, drawWheelWells } from './car-art.js';
 const $ = id => document.getElementById(id);
@@ -13,7 +13,7 @@ const presets = { comfort: [1.3, .4], trail: [1.7, .5], sport: [2.6, .65] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
   exhaust = createExhaust(); exhaust.setIntensity(+$('soot').value);
-  clearInput(); sim = createSimulation({ frequency: +$('spring').value, damping: +$('damping').value, drive });
+  clearInput(); sim = createSimulation({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value });
   paused = finished = false; accumulator = 0; camera = { x: 3, y: 1.4 }; $('overlay').hidden = true; $('pause').textContent = 'Pause';
   $('notice').textContent = 'A small trail. A proper little adventure.';
 }
@@ -29,6 +29,7 @@ function tune() {
   document.querySelectorAll('[data-preset]').forEach(b => b.classList.toggle('selected', presets[b.dataset.preset][0] === f && presets[b.dataset.preset][1] === d));
 }
 $('soot').addEventListener('input',()=>{exhaust.setIntensity(+$('soot').value);$('soot-value').textContent=(+$('soot').value).toFixed(1)+'x';});
+$('pressure').addEventListener('input',()=>{sim.setPressure(+$('pressure').value);$('pressure-value').textContent=(+$('pressure').value).toFixed(1)+' bar';});
 $('spring').addEventListener('input', tune); $('damping').addEventListener('input', tune);
 document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => { const [f, d] = presets[b.dataset.preset]; $('spring').value = f; $('damping').value = d; tune(); }));
 document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click', () => {
@@ -107,20 +108,17 @@ function car() {
     const b=local(i===0?-.7:.7,-.08);line([[X(b.x),Y(b.y)],[X(p.x),Y(p.y)]],'#344744',5);
   });
   sim.wheels.forEach((w,i)=>{
-    const hub=sim.rims[i].getPosition(), r=.48*scale;
-    let grounded=false;
-    for(let edge=w.getContactList();edge;edge=edge.next)if(edge.other.isStatic()&&edge.contact.isTouching())grounded=true;
-    const rubber=a=>groundedTirePoint(a,hub,.48,groundHeight,grounded);
-    const contour=[];for(let j=0;j<128;j++){const p=rubber(j*Math.PI*2/128);contour.push([X(p.x),Y(p.y)]);}
-    polygon(contour,'#202426');
-    // Sidewall and tread use the same world-space contact patch as the contour.
-    for(let j=0;j<30;j++){
-      const a=-w.getAngle()+j*Math.PI*2/30,p=rubber(a);
-      const dx=X(p.x)-X(hub.x),dy=Y(p.y)-Y(hub.y);
-      line([[X(hub.x)+dx*.9,Y(hub.y)+dy*.9],[X(hub.x)+dx*.975,Y(hub.y)+dy*.975]],'#444c48',1.4);
-    }
+    const hub=w.getPosition(),r=TIRE_RADIUS*scale,tire=sim.tires[i],outline=tire.getOutline();
+    // The rendered surface comes directly from the moving collision bodies.
+    polygon(outline.map(p=>[X(p.x),Y(p.y)]),'#202426');
+    for(const node of tire.nodes){const p=node.getPosition();circle(X(p.x),Y(p.y),tire.skin*scale,'#202426');}
+    polygon(outline.map(p=>[X(hub.x+(p.x-hub.x)*.78),Y(hub.y+(p.y-hub.y)*.78)]),'#303936');
+    outline.forEach((p,j)=>{
+      const n=tire.nodes[j].getPosition(),dx=p.x-hub.x,dy=p.y-hub.y;
+      line([[X(hub.x+dx*.88),Y(hub.y+dy*.88)],[X(n.x+(p.x-n.x)*.85),Y(n.y+(p.y-n.y)*.85)]],'#4b514b',1.4);
+      if(xray)line([[X(hub.x+dx*.51),Y(hub.y+dy*.51)],[X(n.x),Y(n.y)]],'#b69a5c',.8);
+    });
     ctx.save();ctx.translate(X(hub.x),Y(hub.y));
-    circle(0,0,r*.67,'#303d35','#425247',1);
     ctx.rotate(-w.getAngle());
     circle(0,0,r*.51,'#b7b8a7','#e0dfc8',1.4);
     circle(0,0,r*.43,'#8e9487','#666f63',1);
@@ -156,6 +154,7 @@ function frame(now) {
   const pos=sim.body.getPosition();camera.x+=(pos.x-camera.x)*Math.min(1,dt*5);camera.y+=(pos.y-camera.y)*Math.min(1,dt*3);
   scenery();drawExhaust();car();
   const distance=Math.max(0,Math.min(FINISH,pos.x-3));$('speed').textContent=Math.round(Math.abs(sim.body.getLinearVelocity().x)*3.6);$('distance').textContent=`${Math.floor(distance)} / 260 m`;$('progress').value=finished?FINISH:distance;$('time').textContent=formatTime(sim.elapsed);
+  $('pressure-live').textContent=`Rear ${sim.tires[0].pressureBar.toFixed(2)} / Front ${sim.tires[1].pressureBar.toFixed(2)} bar`;
   $('rear').value=sim.joints[0].getJointTranslation();$('front').value=sim.joints[1].getJointTranslation();
   if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Tipped over? Press R for a fresh start.':pos.x>53&&pos.x<91?'The rumble strip. Watch those springs.':pos.x>116&&pos.x<153?'Easy on the climb. Let the suspension work.':sim.elapsed<5?'A small trail. A proper little adventure.':'';}
   requestAnimationFrame(frame);

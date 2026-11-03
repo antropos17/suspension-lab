@@ -6,7 +6,7 @@ This project is a JavaScript/Canvas driving game using Planck 1.5.1 and SI units
 
 For suspension, contact, tire material or solver work, read `.agents/skills/planck-vehicle-dynamics/SKILL.md`. For numerical integration and elastic constraints, use `.agents/skills/realtime-physics/SKILL.md` and its reviewed source notes. These are project-local, discoverable Codex skills; they do not require a global configuration change.
 
-The user requires physically deformable tires. Completion requires contact-bearing tire elements to deform and affect hub forces/traction; renderer-only squash or a spring between rigid circles does not satisfy this requirement. The current game's circular tire collider remains an explicitly incomplete approximation. The installed skill's executable ring bench is experimental and is not integrated into the game.
+The user requires physically deformable tires. Completion requires contact-bearing tire elements to deform and affect hub forces/traction; renderer-only squash or a spring between rigid circles does not satisfy this requirement. The game now uses a pressure-driven contact-node ring in src/pneumatic-tire.js. Preserve physical node contacts and render their actual state. The skill's original ring bench is historical; current qualification lives in tests/pneumatic.test.mjs and docs/VEHICLE-MODEL.md.
 
 ## Verification and preservation
 

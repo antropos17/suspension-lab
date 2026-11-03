@@ -1,5 +1,27 @@
 # Vehicle model revision
 
+## Current pneumatic integration — 2026-11-04
+
+This section supersedes earlier rigid-tire descriptions below. `src/pneumatic-tire.js` now supplies the game's tire contact geometry: 32 independent circular tread elements on an elastic belt, radial/offset sidewall links and a rotating rigid rim. There is no rigid outer tire circle and no renderer-only ground projection. The small 0.245 m rim circle exists for bottoming; normal rolling contact is carried by the tread bodies. The old `src/wheel-shape.js` was removed.
+
+The nominal tire radius is 0.48 m, bead radius 0.048 m and centerline radius 0.432 m; carcass mass is 24 kg and effective width is 0.18 m. Chamber volume is width times signed tread polygon area minus rim disk area. At constant temperature, absolute pressure is `(101325 + inflationBar*100000)*referenceVolume/currentVolume`. Atmospheric pressure is subtracted before pressure forces are applied. A numerical floor of 15% reference chamber volume bounds extreme compression forces; this is not validated recovery from an inverted carcass. The inflation setting controls gas quantity at reference volume, while the UI separately displays actual rear/front operating pressures. Expansion means the operating value can be below the nominal setting.
+
+Each counterclockwise polygon vertex receives `gaugePressure*width/2*(y_next-y_prev, x_prev-x_next)`, the area gradient. These internal forces sum to zero force and torque; sidewalls transfer pressure loads to the rim. Circumferential prestress balances nominal 2.2 bar inflation, and belt stiffness scales with segment length/effective mass. Offset links transmit drive and brake torque; a radial-only network cannot resist shear correctly. The material parameters are an original simplified elastic network, not measured rubber properties.
+
+Each suspension carrier drives its rim through a revolute motor. The carrier's prismatic guide transmits reaction torque to the chassis. Terrain/liner contacts act on the tread; main chassis fixtures use a separate category so the tire does not lock against its own body. A slip-limited motor target uses rolling speed plus 5 rad/s, capped at 22 rad/s, to reduce excessive standstill wheelspin. Existing drive modes, braking torque and suspension forces remain. Four solver substeps per 120 Hz tick give 480 Hz; rings above 32 nodes receive at least eight substeps.
+
+Rejected attempts: initial tread/chassis self-collision locked rotation and was corrected with filtering. Immediate 22 rad/s FWD spin narrowly failed a hill restart and was corrected with the slip-limited target. A 48-node ring at 1/480 s expanded incorrectly; increasing iterations alone did not fix it. At 1/960 s, 24/32/48-node bench hub heights were about 0.46829 / 0.46822 / 0.46855 m. Refinement therefore requires the smaller step. Old load tests applied force once before a game tick, which Planck cleared after its first substep; they now apply load*STEP impulses so the average applied load remains 1000 N rather than dropping when substeps increase. The suspension travel assertion was retained.
+
+At 250 kg hub load, the 32-node bench settled near 0.4483 m hub height at nominal 0.6 bar (operating 0.7215 bar, active tread span 0.2615 m), and 0.4681 m at nominal 2.2 bar (operating 2.2109 bar, span 0.096 m). At 350 kg and 0.6 bar, height was about 0.4384 m and pressure 0.7262 bar. Span is a coarse diagnostic including bead diameter, not a calibrated continuous pressure footprint. Tests check inflation response, physical deformation, settling, small-rim clearance, node-derived outline, momentum balance and step/mesh refinement. Full-course clearance uses every node and bead radius. Contact-pair count now has a 1200 bound because each wheel has 32 contact bodies; zero geometric overlap and travel-limit assertions remain.
+
+Browser evidence includes 0.6 bar rough-track driving and 260 m completion at 38.0 simulated seconds including idle/coasting, live inflation/restart retention and 3.2 bar driving, with no captured JS errors during the low-pressure run. Final command outcomes are recorded in STATUS.md.
+
+Limits: this is a physically deforming two-dimensional pneumatic model, not calibrated 3D tire FEA. Temperature, lateral width deformation, wear, punctures and material damage are absent. Contact beads create discretization and a slightly scalloped surface. CPU cost is higher than rigid circles; mobile hardware and engineering accuracy are not qualified. The historical skill-install bench remains a separate earlier experiment.
+
+Primary model references: [BeamNG pressure-wheel construction](https://documentation.beamng.com/modding/vehicle/sections/wheels/), [Chrono tire classes](https://api.chrono.projectchrono.org/wheeled_tire.html), [XPBD](https://mmacklin.com/xpbd.pdf), installed Planck DistanceJoint/RevoluteJoint APIs, and [OptimumG damping discussion](https://optimumg.com/spring-brake/). No external simulator or new dependency was installed.
+
+## Historical revisions
+
 ## Sources and interpretation
 
 - [MathWorks suspension comparison](https://de.mathworks.com/help/sdl/ug/suspension-system-comparison.html): sprung and unsprung masses, nonlinear spring/damper models. Applied as separate chassis, hub and tire bodies.

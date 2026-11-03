@@ -7,7 +7,7 @@
     "dev": "node server.mjs",
     "build": "node build.mjs",
     "test": "node --test tests/*.test.mjs",
-    "lint": "node --check src/game.js && node --check src/physics.js && node --check src/exhaust.js && node --check src/wheel-shape.js && node --check src/terrain.js && node --check src/car-art.js && node --check src/vehicle-geometry.js && node --check src/exhaust-mount.js && node --check server.mjs && node --check build.mjs"
+    "lint": "node --check src/game.js && node --check src/physics.js && node --check src/exhaust.js && node --check src/pneumatic-tire.js && node --check src/terrain.js && node --check src/car-art.js && node --check src/vehicle-geometry.js && node --check src/exhaust-mount.js && node --check server.mjs && node --check build.mjs"
   },
   "dependencies": { "planck": "1.5.1" },
   "devDependencies": { "esbuild": "0.28.2" }

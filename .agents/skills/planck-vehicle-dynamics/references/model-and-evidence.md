@@ -1,5 +1,7 @@
 # Model and evidence
 
+Current integration (2026-11-04): the game uses src/pneumatic-tire.js, a pressure-driven contact ring coupled to rotating rims and suspension carriers. Read docs/VEHICLE-MODEL.md from the project root for the current formulation and tests/pneumatic.test.mjs for qualification. The sections below record the earlier bench at skill-install time; statements about an unintegrated rigid game model are historical.
+
 ## Sources
 
 - [Planck 1.5.1 source](https://github.com/piqnt/planck.js/tree/v1.5.1), especially the installed `node_modules/planck/dist/planck.d.ts`: DistanceJoint supports compliant links, explicit local anchors and frequency/damping parameters; PrismaticJoint can constrain the bench hub vertically. Planck supplies rigid contacts and joints, not a ready-made pneumatic tire solver.

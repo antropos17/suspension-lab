@@ -13,11 +13,12 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 - Spring stiffness and shock damping affect the simulation immediately. Show chassis reveals the suspension.
 - Switch between front, rear and all-wheel drive while driving. The choice is retained when restarting the run.
 - Exhaust soot slider: 0 switches off new smoke, 6x produces heavy smoke; default is 3x. The setting survives a run restart.
+- Tire pressure controls nominal inflation from 0.6 to 3.2 bar and survives restart. Lower pressure physically deforms the carcass and changes road contact; actual operating pressures are shown for both axles. Show chassis reveals the tire network.
 - Suspension guides limit compression and droop. Physical inner fender liners stop tires from moving through the wings; hubs follow chassis rotation and transmit drive reaction to it.
 
 ## Physics
 
-Planck provides rigid bodies, rotating wheels, friction, collision response and independent suspension. Each tire has a separate damped spring connection to its hub; its displayed shape compresses with that spring. Collision geometry remains circular, so this is an approximation of tire compliance, not a deformable tire model. Gravity is 9.81 m/s²; physics advances at 120 Hz with bounded frame accumulation. This is a physically based 2D prototype, not a validated full vehicle engineering model. It does not model suspension linkage geometry, transmission or 3D weight transfer.
+Planck provides rigid contacts and joints. Each pneumatic tire now has 32 independent tread contact bodies, elastic belt/sidewall links and an isothermal pressure-volume model around a rigid rim. Pressure changes actual geometry and hub support; the renderer follows those contact bodies. Drive and brake torque pass through the rim and carcass into road contacts. Gravity is 9.81 m/s²; physics advances at 120 Hz with four 480 Hz solver substeps for the default ring. This is a physically deformable 2D prototype, not calibrated rubber FEA or a validated full vehicle model. It does not model temperature, punctures, lateral tire deformation or 3D weight transfer.
 
 Reference: https://piqnt.dev/planck.js/docs/joint/distance-joint.html (spring frequency and damping concepts).
 
