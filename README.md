@@ -12,6 +12,7 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 - Reach the finish along the 260 m trail. Restart if you roll over.
 - Spring stiffness and shock damping affect the simulation immediately. Show chassis reveals the suspension.
 - Switch between front, rear and all-wheel drive while driving. The choice is retained when restarting the run.
+- Suspension guides limit compression and droop. Physical inner fender liners stop tires from moving through the wings; hubs follow chassis rotation and transmit drive reaction to it.
 
 ## Physics
 

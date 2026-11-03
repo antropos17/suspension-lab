@@ -93,7 +93,8 @@ function car() {
   sim.wheels.forEach((w,i)=>{
     const p=w.getPosition(),r=.48*scale;ctx.save();ctx.translate(X(p.x),Y(p.y));
     const compression=Math.max(0,Math.min(.16,sim.tires[i].getJointTranslation()));
-    ctx.scale(1+compression*.35,1-compression*.65);ctx.rotate(-w.getAngle());
+    // Keep the rendered tire inside its collision envelope at the arch liner.
+    ctx.scale(1,1-compression*.65);ctx.rotate(-w.getAngle());
     circle(0,0,r,'#293c38','#71816a',2);circle(0,0,r*.78,'#344641','#243730',1);circle(0,0,r*.64,'#8d9a86','#b8bfa3',2);
     for(let i=0;i<8;i++){const a=i*Math.PI/4;line([[Math.cos(a)*r*.84,Math.sin(a)*r*.84],[Math.cos(a+.13)*r*.98,Math.sin(a+.13)*r*.98]],'#536158',2);}
     for(let i=0;i<5;i++){const a=i*Math.PI*2/5;line([[Math.cos(a)*r*.18,Math.sin(a)*r*.18],[Math.cos(a)*r*.51,Math.sin(a)*r*.51]],'#4d635c',3);}

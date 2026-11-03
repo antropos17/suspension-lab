@@ -51,3 +51,27 @@ test('tires compress under vehicle load',()=>{
   const s=createSimulation();run(s,3);
   for(const t of s.tires) assert.ok(t.getJointTranslation()>.01 && t.getJointTranslation()<.15);
 });
+
+test('liners contain the tires on a complete rough-track run for every drive',()=>{
+for (const drive of ['awd','fwd','rwd']) {
+ const s=createSimulation({drive,frequency:2,damping:.4});let contacts=0,minGap=1,maxTravel=-1;
+ s.world.on('begin-contact', c=>{if(c.getFixtureA().getUserData()==='arch'||c.getFixtureB().getUserData()==='arch')contacts++;});
+ for(let i=0;i<45/STEP&&s.body.getPosition().x<263;i++){
+ s.step(1);
+ for(let j=0;j<2;j++){
+ const p=s.body.getLocalPoint(s.wheels[j].getPosition()),cx=j===0?-1.25:1.25;
+ for(let k=0;k<16;k++){
+ const a=k*Math.PI/16,b=(k+1)*Math.PI/16;
+ const x=cx+.57*Math.cos(a),y=-.55+.57*Math.sin(a),dx=.57*(Math.cos(b)-Math.cos(a)),dy=.57*(Math.sin(b)-Math.sin(a));
+ const t=Math.max(0,Math.min(1,((p.x-x)*dx+(p.y-y)*dy)/(dx*dx+dy*dy)));
+ minGap=Math.min(minGap,Math.hypot(p.x-x-t*dx,p.y-y-t*dy)-.48);
+ }maxTravel=Math.max(maxTravel,s.stops[j].getJointTranslation());
+ }
+ }
+ assert.ok(s.body.getPosition().x>=263,`${drive} completes the rough trail`);
+ assert.ok(contacts>0,`${drive} actually contacts the liners`);
+ assert.ok(minGap>=0,`${drive} tire crosses the visible arch: ${minGap}`);
+ assert.ok(maxTravel<.281,`${drive} exceeds the suspension stop`);
+}
+
+});
