@@ -11,10 +11,11 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 - Touch controls are available on screen.
 - Reach the finish along the 260 m trail. Restart if you roll over.
 - Spring stiffness and shock damping affect the simulation immediately. Show chassis reveals the suspension.
+- Switch between front, rear and all-wheel drive while driving. The choice is retained when restarting the run.
 
 ## Physics
 
-Planck provides rigid bodies, rotating wheels, friction, collision response and two independent wheel joints. Gravity is 9.81 m/s²; physics advances at 120 Hz with bounded frame accumulation. Springs use frequency and a damping ratio. This is a physically based 2D prototype, not a validated full vehicle engineering model. It does not model tire deformation, suspension linkage geometry, transmission or 3D weight transfer.
+Planck provides rigid bodies, rotating wheels, friction, collision response and independent suspension. Each tire has a separate damped spring connection to its hub; its displayed shape compresses with that spring. Collision geometry remains circular, so this is an approximation of tire compliance, not a deformable tire model. Gravity is 9.81 m/s²; physics advances at 120 Hz with bounded frame accumulation. This is a physically based 2D prototype, not a validated full vehicle engineering model. It does not model suspension linkage geometry, transmission or 3D weight transfer.
 
 Reference: https://piqnt.dev/planck.js/docs/joint/distance-joint.html (spring frequency and damping concepts).
 

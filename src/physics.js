@@ -11,7 +11,7 @@ export function terrainHeight(x) {
     + (x > 120 && x < 150 ? 3 * Math.sin((x - 120) / 30 * Math.PI) ** 2 : 0);
 }
 
-export function createSimulation({ frequency = 3.2, damping = .65 } = {}) {
+export function createSimulation({ frequency = 3.2, damping = .65, drive = 'awd' } = {}) {
   const world = new World(Vec2(0, -9.81));
   const ground = world.createBody();
   const points = [];
@@ -25,21 +25,29 @@ export function createSimulation({ frequency = 3.2, damping = .65 } = {}) {
   const body = world.createDynamicBody({ position: Vec2(3, 1.4), angularDamping: .6 });
   body.createFixture(new Box(1.8, .32), { density: 180, friction: .4, filterGroupIndex: -1 });
   body.createFixture(new Box(.85, .36, Vec2(-.25, .55), 0), { density: 50, friction: .4, filterGroupIndex: -1 });
+  const rims = [-1.25, 1.25].map(x => {
+    const rim = world.createDynamicBody({ position: Vec2(3 + x, .53), fixedRotation: true });
+    rim.createFixture(new Circle(.2), { density: 180, filterMaskBits: 0 });
+    return rim;
+  });
   const wheels = [-1.25, 1.25].map(x => {
     const wheel = world.createDynamicBody({ position: Vec2(3 + x, .53), angularDamping: .02 });
-    wheel.createFixture(new Circle(.48), { density: 45, friction: 2, restitution: .03, filterGroupIndex: -1 });
+    wheel.createFixture(new Circle(.48), { density: 45, friction: 3, restitution: .03, filterGroupIndex: -1 });
     return wheel;
   });
-  const joints = wheels.map(w => world.createJoint(new WheelJoint({ frequencyHz: frequency, dampingRatio: damping, enableMotor: true, maxMotorTorque: 0 }, body, w, w.getPosition(), Vec2(0, 1))));
+  const joints = rims.map(r => world.createJoint(new WheelJoint({ frequencyHz: frequency, dampingRatio: damping }, body, r, r.getPosition(), Vec2(0, 1))));
+  const tires = wheels.map((w, i) => world.createJoint(new WheelJoint({ frequencyHz: 10, dampingRatio: .8, enableMotor: true, maxMotorTorque: 0 }, rims[i], w, w.getPosition(), Vec2(0, 1))));
   let elapsed = 0;
   return {
-    world, body, wheels, joints, points,
+    world, body, wheels, rims, joints, tires, points,
     get elapsed() { return elapsed; },
+    setDrive(mode) { if (['fwd', 'rwd', 'awd'].includes(mode)) { drive = mode; wheels.forEach(w => w.setAwake(true)); } },
     tune(hz, ratio) { joints.forEach(j => { j.setSpringFrequencyHz(hz); j.setSpringDampingRatio(ratio); }); body.setAwake(true); },
     step(throttle = 0, brake = false) {
-      joints.forEach(j => {
+      tires.forEach((j, i) => {
+        const powered = drive === 'awd' || (drive === 'rwd' ? i === 0 : i === 1);
         j.setMotorSpeed(brake ? 0 : -throttle * 27);
-        j.setMaxMotorTorque(brake ? 1200 : Math.abs(throttle) > .01 ? 1200 : 12);
+        j.setMaxMotorTorque(brake ? 1600 : Math.abs(throttle) > .01 && powered ? (drive === 'awd' ? 1200 : 2400) : 12);
       });
       world.step(STEP, 10, 4);
       elapsed += STEP;

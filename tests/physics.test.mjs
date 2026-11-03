@@ -33,3 +33,21 @@ test('car accelerates from a stop on the hill with every suspension preset',()=>
     assert.ok(s.body.getPosition().x>start+5,`preset ${frequency} must climb from a stop`);
   }
 });
+test('each drive mode can start on a hill and switches the powered axle',()=>{
+  for(const mode of ['fwd','rwd','awd']) {
+    const s=createSimulation({drive:mode});
+    for(let i=0;i<60/STEP && s.body.getPosition().x<123;i++)s.step(1);
+    assert.ok(s.body.getPosition().x>=123,`${mode} reaches the hill`);
+    run(s,3,0,true); const start=s.body.getPosition().x;
+    run(s,3,1);
+    assert.ok(s.body.getPosition().x>start+2,`${mode} climbs from a stop`);
+    if(mode==='fwd')assert.ok(s.tires[1].getMaxMotorTorque()>s.tires[0].getMaxMotorTorque());
+    if(mode==='rwd')assert.ok(s.tires[0].getMaxMotorTorque()>s.tires[1].getMaxMotorTorque());
+    if(mode==='awd')assert.equal(s.tires[0].getMaxMotorTorque(),s.tires[1].getMaxMotorTorque());
+    s.setDrive('awd');s.step(1);assert.equal(s.tires[0].getMaxMotorTorque(),s.tires[1].getMaxMotorTorque());
+  }
+});
+test('tires compress under vehicle load',()=>{
+  const s=createSimulation();run(s,3);
+  for(const t of s.tires) assert.ok(t.getJointTranslation()>.01 && t.getJointTranslation()<.15);
+});

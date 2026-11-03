@@ -1,13 +1,13 @@
 import { createSimulation, terrainHeight, FINISH, STEP } from './physics.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
-let sim, paused = false, finished = false, xray = false, accumulator = 0, last = performance.now(), camera = { x: 3, y: 2.2 };
+let sim, paused = false, finished = false, xray = false, drive = 'awd', accumulator = 0, last = performance.now(), camera = { x: 3, y: 2.2 };
 let width = 1000, height = 500, scale = 64;
 const keys = new Set(), touches = new Set();
 const presets = { comfort: [2, .4], trail: [3.2, .65], sport: [5.2, .85] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
-  clearInput(); sim = createSimulation({ frequency: +$('spring').value, damping: +$('damping').value });
+  clearInput(); sim = createSimulation({ frequency: +$('spring').value, damping: +$('damping').value, drive });
   paused = finished = false; accumulator = 0; camera = { x: 3, y: 2.2 }; $('overlay').hidden = true; $('pause').textContent = 'Pause';
   $('notice').textContent = 'A small trail. A proper little adventure.';
 }
@@ -24,6 +24,10 @@ function tune() {
 }
 $('spring').addEventListener('input', tune); $('damping').addEventListener('input', tune);
 document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => { const [f, d] = presets[b.dataset.preset]; $('spring').value = f; $('damping').value = d; tune(); }));
+document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click', () => {
+  drive = b.dataset.drive; sim.setDrive(drive);
+  document.querySelectorAll('[data-drive]').forEach(option => { const selected = option.dataset.drive === drive; option.classList.toggle('selected', selected); option.setAttribute('aria-pressed', selected); });
+}));
 $('pause').addEventListener('click', () => pause()); $('reset').addEventListener('click', reset); $('resume').addEventListener('click', () => finished ? reset() : pause(false));
 $('xray').addEventListener('click', () => { xray = !xray; $('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Hide chassis' : 'Show chassis'; });
 window.addEventListener('keydown', e => {
@@ -110,8 +114,10 @@ function car() {
   circle(-1.54,.27,.055,'#d2b97f','#816d44',.015);
   ctx.globalAlpha=1;ctx.restore();
   if(xray)sim.wheels.forEach((w,i)=>spring(local(i===0?-1.25:1.25,.35),w.getPosition()));
-  sim.wheels.forEach(w=>{
-    const p=w.getPosition(),r=.48*scale;ctx.save();ctx.translate(X(p.x),Y(p.y));ctx.rotate(-w.getAngle());
+  sim.wheels.forEach((w,i)=>{
+    const p=w.getPosition(),r=.48*scale;ctx.save();ctx.translate(X(p.x),Y(p.y));
+    const compression=Math.max(0,Math.min(.16,sim.tires[i].getJointTranslation()));
+    ctx.scale(1+compression*.35,1-compression*.65);ctx.rotate(-w.getAngle());
     circle(0,0,r,'#293c38','#71816a',2);circle(0,0,r*.78,'#344641','#243730',1);circle(0,0,r*.64,'#8d9a86','#b8bfa3',2);
     for(let i=0;i<8;i++){const a=i*Math.PI/4;line([[Math.cos(a)*r*.84,Math.sin(a)*r*.84],[Math.cos(a+.13)*r*.98,Math.sin(a+.13)*r*.98]],'#536158',2);}
     for(let i=0;i<5;i++){const a=i*Math.PI*2/5;line([[Math.cos(a)*r*.18,Math.sin(a)*r*.18],[Math.cos(a)*r*.51,Math.sin(a)*r*.51]],'#4d635c',3);}
