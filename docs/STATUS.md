@@ -15,3 +15,5 @@ Control update: A / D are the primary documented controls (reverse / accelerate)
 Next: collect player feedback on handling before expanding scope.
 
 Driving update: A/D, brake, pause and restart now remain available after a tuning slider receives focus. Wheel motor speed, torque, coasting resistance, braking torque and chassis angular damping were adjusted. The car has additional body, window, lighting, roof rack and wheel details. The three physics tests, syntax checks and build pass; a browser check confirmed acceleration with D while the slider retained focus. An automated physics-only run reached the finish under continuous throttle with all three presets; this does not replace hands-on testing of the complete game.
+
+Power update: increased motor torque, target wheel speed, traction and braking force. The former default setup rolled backward when accelerating after stopping on the climb. Physics regression now checks a hill restart for each preset. Browser driving feel remains subject to player feedback.

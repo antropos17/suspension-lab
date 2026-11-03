@@ -21,3 +21,15 @@ test('suspension changes actual travel; rough-track simulation remains finite',(
   assert.ok(firm.body.getPosition().x>50);
   for(const b of [firm.body,...firm.wheels]) {const p=b.getPosition();assert.ok(Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.y>-3);}
 });
+test('car accelerates from a stop on the hill with every suspension preset',()=>{
+  for(const [frequency,damping] of [[2,.4],[3.2,.65],[5.2,.85]]) {
+    const s=createSimulation({frequency,damping});
+    for(let i=0;i<60/STEP && s.body.getPosition().x<123;i++)s.step(1);
+    assert.ok(s.body.getPosition().x>=123,'car reaches the climb');
+    run(s,3,0,true);
+    const start=s.body.getPosition().x;
+    assert.ok(start>120 && start<135,'vehicle stopped on the climb');
+    run(s,3,1);
+    assert.ok(s.body.getPosition().x>start+5,`preset ${frequency} must climb from a stop`);
+  }
+});

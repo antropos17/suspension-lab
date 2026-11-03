@@ -27,7 +27,7 @@ export function createSimulation({ frequency = 3.2, damping = .65 } = {}) {
   body.createFixture(new Box(.85, .36, Vec2(-.25, .55), 0), { density: 50, friction: .4, filterGroupIndex: -1 });
   const wheels = [-1.25, 1.25].map(x => {
     const wheel = world.createDynamicBody({ position: Vec2(3 + x, .53), angularDamping: .02 });
-    wheel.createFixture(new Circle(.48), { density: 45, friction: 1.35, restitution: .03, filterGroupIndex: -1 });
+    wheel.createFixture(new Circle(.48), { density: 45, friction: 2, restitution: .03, filterGroupIndex: -1 });
     return wheel;
   });
   const joints = wheels.map(w => world.createJoint(new WheelJoint({ frequencyHz: frequency, dampingRatio: damping, enableMotor: true, maxMotorTorque: 0 }, body, w, w.getPosition(), Vec2(0, 1))));
@@ -38,8 +38,8 @@ export function createSimulation({ frequency = 3.2, damping = .65 } = {}) {
     tune(hz, ratio) { joints.forEach(j => { j.setSpringFrequencyHz(hz); j.setSpringDampingRatio(ratio); }); body.setAwake(true); },
     step(throttle = 0, brake = false) {
       joints.forEach(j => {
-        j.setMotorSpeed(brake ? 0 : -throttle * 20);
-        j.setMaxMotorTorque(brake ? 650 : Math.abs(throttle) > .01 ? 360 : 12);
+        j.setMotorSpeed(brake ? 0 : -throttle * 27);
+        j.setMaxMotorTorque(brake ? 1200 : Math.abs(throttle) > .01 ? 1200 : 12);
       });
       world.step(STEP, 10, 4);
       elapsed += STEP;
