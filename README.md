@@ -6,7 +6,7 @@ A tiny local 2D driving game. No account, backend, or network connection is requ
 
 Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm run dev` in this directory. The server binds to loopback only. Close its window to stop it.
 
-- Left / right arrows or A / D: reverse / accelerate.
+- A: reverse. D: accelerate. Arrow keys also work.
 - Space: brake. P: pause. R: restart.
 - Touch controls are available on screen.
 - Reach the finish along the 260 m trail. Restart if you roll over.

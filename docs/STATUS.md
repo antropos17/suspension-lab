@@ -10,4 +10,6 @@ Storage: project and dependency footprint is approximately 42 MB. No unbounded l
 
 Instruction scope: X:/AGENTS.md describes Junk to Neon and its slot/progression architecture. This is a separate user-requested driving game; those product-specific mechanics and stack were not applied. Its generic verification and preservation rules were retained.
 
+Control update: A / D are the primary documented controls (reverse / accelerate). Existing physical-key bindings already support these keys independently of keyboard layout; arrow keys remain available. Updated the visible footer, canvas accessible description, and README.
+
 Next: collect player feedback on handling before expanding scope.
