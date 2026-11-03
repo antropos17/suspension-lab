@@ -27,7 +27,7 @@ document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('clic
 $('pause').addEventListener('click', () => pause()); $('reset').addEventListener('click', reset); $('resume').addEventListener('click', () => finished ? reset() : pause(false));
 $('xray').addEventListener('click', () => { xray = !xray; $('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Hide chassis' : 'Show chassis'; });
 window.addEventListener('keydown', e => {
-  if (e.target instanceof HTMLInputElement) return;
+  if (e.target instanceof HTMLInputElement && !['KeyA','KeyD','Space','KeyR','KeyP'].includes(e.code)) return;
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
   if (e.code === 'KeyR') reset(); else if (e.code === 'KeyP') pause(); else keys.add(e.code);
@@ -95,14 +95,27 @@ function car() {
   polygon([[1.67,.17],[1.88,.15],[1.88,-.01],[1.67,-.01]],'#fff2bd');
   polygon([[-1.84,.12],[-1.7,.12],[-1.7,-.03],[-1.84,-.03]],'#b86e4b');
   line([[-1.93,-.21],[-1.5,-.21]],'#354743',.12);line([[1.52,-.21],[1.97,-.21]],'#354743',.12);
-  line([[-.9,1.06],[.57,1.06]],'#465b4a',.065);ctx.globalAlpha=1;ctx.restore();
+  line([[-.9,1.06],[.57,1.06]],'#465b4a',.065);
+  // Body details move with the chassis while the wheels move independently.
+  line([[-1.76,.31],[-1.12,.38],[-.9,1.02],[.65,1.02],[1.02,.4],[1.76,.28]],'#f8d77c',.035);
+  line([[-1.72,-.16],[-.45,-.16]],'#9b702b',.035);line([[.08,-.16],[1.65,-.16]],'#9b702b',.035);
+  line([[-.1,.4],[-.1,-.17]],'#8c692e',.025);line([[.79,.38],[.85,-.13]],'#a77a31',.024);
+  line([[-.05,.3],[.18,.3]],'#f4dfaa',.045);line([[-1.02,.3],[-.83,.3]],'#f4dfaa',.045);
+  line([[.21,.78],[.47,.78],[.67,.52]],'#a6c9bc',.035);line([[-.69,.79],[-.4,.79]],'#a6c9bc',.035);
+  polygon([[.78,.48],[.98,.48],[1.01,.34],[.82,.34]],'#3c5651','#e0bc66',.025);
+  line([[-1.55,-.25],[-.95,-.25]],'#303f39',.1);line([[.94,-.25],[1.55,-.25]],'#303f39',.1);
+  line([[-.72,1.08],[-.72,1.2],[.42,1.2],[.42,1.08]],'#405449',.035);
+  line([[-.7,1.18],[.4,1.18]],'#84917b',.025);
+  line([[1.71,.08],[1.85,.08]],'#fff8d7',.045);line([[-1.8,.03],[-1.72,.03]],'#e98563',.04);
+  circle(-1.54,.27,.055,'#d2b97f','#816d44',.015);
+  ctx.globalAlpha=1;ctx.restore();
   if(xray)sim.wheels.forEach((w,i)=>spring(local(i===0?-1.25:1.25,.35),w.getPosition()));
   sim.wheels.forEach(w=>{
     const p=w.getPosition(),r=.48*scale;ctx.save();ctx.translate(X(p.x),Y(p.y));ctx.rotate(-w.getAngle());
-    circle(0,0,r,'#293c38','#71816a',2);circle(0,0,r*.64,'#8d9a86','#b8bfa3',2);
+    circle(0,0,r,'#293c38','#71816a',2);circle(0,0,r*.78,'#344641','#243730',1);circle(0,0,r*.64,'#8d9a86','#b8bfa3',2);
     for(let i=0;i<8;i++){const a=i*Math.PI/4;line([[Math.cos(a)*r*.84,Math.sin(a)*r*.84],[Math.cos(a+.13)*r*.98,Math.sin(a+.13)*r*.98]],'#536158',2);}
     for(let i=0;i<5;i++){const a=i*Math.PI*2/5;line([[Math.cos(a)*r*.18,Math.sin(a)*r*.18],[Math.cos(a)*r*.51,Math.sin(a)*r*.51]],'#4d635c',3);}
-    circle(0,0,r*.19,'#dbc786');ctx.restore();
+    circle(0,0,r*.19,'#dbc786');for(let i=0;i<5;i++){const a=i*Math.PI*2/5;circle(Math.cos(a)*r*.28,Math.sin(a)*r*.28,r*.035,'#e5d9b5');}ctx.restore();
   });
 }
 function frame(now) {

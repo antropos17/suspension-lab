@@ -22,7 +22,7 @@ export function createSimulation({ frequency = 3.2, damping = .65 } = {}) {
     if (i < points.length - 1) edge.setNextVertex(points[i + 1]);
     ground.createFixture(edge, { friction: .95 });
   }
-  const body = world.createDynamicBody({ position: Vec2(3, 1.4), angularDamping: .15 });
+  const body = world.createDynamicBody({ position: Vec2(3, 1.4), angularDamping: .6 });
   body.createFixture(new Box(1.8, .32), { density: 180, friction: .4, filterGroupIndex: -1 });
   body.createFixture(new Box(.85, .36, Vec2(-.25, .55), 0), { density: 50, friction: .4, filterGroupIndex: -1 });
   const wheels = [-1.25, 1.25].map(x => {
@@ -38,8 +38,8 @@ export function createSimulation({ frequency = 3.2, damping = .65 } = {}) {
     tune(hz, ratio) { joints.forEach(j => { j.setSpringFrequencyHz(hz); j.setSpringDampingRatio(ratio); }); body.setAwake(true); },
     step(throttle = 0, brake = false) {
       joints.forEach(j => {
-        j.setMotorSpeed(brake ? 0 : -throttle * 35);
-        j.setMaxMotorTorque(brake ? 430 : Math.abs(throttle) > .01 ? 220 : 0);
+        j.setMotorSpeed(brake ? 0 : -throttle * 20);
+        j.setMaxMotorTorque(brake ? 650 : Math.abs(throttle) > .01 ? 360 : 12);
       });
       world.step(STEP, 10, 4);
       elapsed += STEP;
