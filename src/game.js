@@ -1,5 +1,6 @@
 import { createSimulation, terrainHeight, FINISH, STEP } from './physics.js';
 import { createExhaust } from './exhaust.js';
+import { tirePoint } from './wheel-shape.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
 let sim, paused = false, finished = false, xray = false, drive = 'awd', accumulator = 0, last = performance.now(), camera = { x: 3, y: 1.4 };
@@ -9,7 +10,7 @@ let exhaust = createExhaust();
 const presets = { comfort: [2, .4], trail: [3.2, .65], sport: [5.2, .85] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
-  exhaust = createExhaust();
+  exhaust = createExhaust(); exhaust.setIntensity(+$('soot').value);
   clearInput(); sim = createSimulation({ frequency: +$('spring').value, damping: +$('damping').value, drive });
   paused = finished = false; accumulator = 0; camera = { x: 3, y: 1.4 }; $('overlay').hidden = true; $('pause').textContent = 'Pause';
   $('notice').textContent = 'A small trail. A proper little adventure.';
@@ -25,6 +26,7 @@ function tune() {
   sim.tune(f, d);
   document.querySelectorAll('[data-preset]').forEach(b => b.classList.toggle('selected', presets[b.dataset.preset][0] === f && presets[b.dataset.preset][1] === d));
 }
+$('soot').addEventListener('input',()=>{exhaust.setIntensity(+$('soot').value);$('soot-value').textContent=(+$('soot').value).toFixed(1)+'x';});
 $('spring').addEventListener('input', tune); $('damping').addEventListener('input', tune);
 document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => { const [f, d] = presets[b.dataset.preset]; $('spring').value = f; $('damping').value = d; tune(); }));
 document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click', () => {
@@ -94,17 +96,32 @@ function car() {
     const b=local(i===0?-.7:.7,-.08);line([[X(b.x),Y(b.y)],[X(p.x),Y(p.y)]],'#344744',5);spring(a,p);
   });
   sim.wheels.forEach((w,i)=>{
-    const p=w.getPosition(),r=.48*scale;ctx.save();ctx.translate(X(p.x),Y(p.y));
-    const compression=Math.max(0,Math.min(.16,sim.tires[i].getJointTranslation()));
-    // Keep the rendered tire inside its collision envelope at the arch liner.
-    // The compliant hub moves inside the tire. Only rubber deforms; the rim stays rigid.
-    ctx.save();ctx.scale(1,1-compression*.45);ctx.rotate(-w.getAngle());
-    circle(0,0,r,'#25322e','#526055',1.5);circle(0,0,r*.81,'#2c3933','#394a40',1);
-    for(let i=0;i<8;i++){const a=i*Math.PI/4;line([[Math.cos(a)*r*.84,Math.sin(a)*r*.84],[Math.cos(a+.13)*r*.98,Math.sin(a+.13)*r*.98]],'#536158',2);}
-    ctx.restore();const hub=sim.rims[i].getPosition();ctx.translate((hub.x-p.x)*scale,-(hub.y-p.y)*scale);ctx.rotate(-w.getAngle());
-    circle(0,0,r*.51,'#879483','#c3c6ac',1.5);circle(0,0,r*.42,'#687c70','#42574b',1);
-    for(let i=0;i<5;i++){const a=i*Math.PI*2/5;line([[Math.cos(a)*r*.16,Math.sin(a)*r*.16],[Math.cos(a)*r*.39,Math.sin(a)*r*.39]],'#b5bda2',2);}
-    circle(0,0,r*.17,'#c5b888');for(let i=0;i<5;i++){const a=i*Math.PI*2/5;circle(Math.cos(a)*r*.26,Math.sin(a)*r*.26,r*.03,'#dfd6b4');}ctx.restore();
+    const hub=sim.rims[i].getPosition(), tire=w.getPosition(), r=.48*scale;
+    let grounded=false;
+    for(let edge=w.getContactList();edge;edge=edge.next)if(edge.other.isStatic()&&edge.contact.isTouching())grounded=true;
+    const slope=grounded?(terrainHeight(tire.x+.12)-terrainHeight(tire.x-.12))/.24:0;
+    const tilt=Math.atan(slope);
+    const compression=grounded?Math.max(.025,Math.min(.125,sim.tires[i].getJointTranslation())):0;
+    ctx.save();ctx.translate(X(hub.x),Y(hub.y));ctx.rotate(-tilt);
+    const contour=[];for(let j=0;j<96;j++){const p=tirePoint(j*Math.PI*2/96,r,compression*scale);contour.push([p.x,p.y]);}
+    polygon(contour,'#222d29','#647065',1.5);
+    // Tread markers rotate around the same hub as the stamped steel rim.
+    for(let j=0;j<22;j++){
+      const a=-w.getAngle()+tilt+j*Math.PI*2/22,p=tirePoint(a,r,compression*scale);
+      line([[p.x*.91,p.y*.91],[p.x*.98,p.y*.98]],'#48594d',1.8);
+    }
+    circle(0,0,r*.67,'#303d35','#425247',1);
+    ctx.rotate(-w.getAngle()+tilt);
+    circle(0,0,r*.51,'#b7b8a7','#e0dfc8',1.4);
+    circle(0,0,r*.43,'#8e9487','#666f63',1);
+    for(let j=0;j<8;j++){
+      const a=j*Math.PI/4;ctx.save();ctx.rotate(a);ctx.beginPath();ctx.ellipse(r*.34,0,r*.075,r*.045,0,0,Math.PI*2);ctx.fillStyle='#2c3830';ctx.fill();ctx.restore();
+    }
+    circle(0,0,r*.23,'#c3c4b0','#e8e5d1',1);
+    for(let j=0;j<4;j++){const a=j*Math.PI/2;circle(Math.cos(a)*r*.18,Math.sin(a)*r*.18,r*.035,'#4c574d','#d8d6c0',.6);}
+    circle(0,0,r*.105,'#737f72','#d0d0b8',1);
+    line([[r*.43,0],[r*.49,0]],'#18271f',2); // valve breaks rotational symmetry
+    ctx.restore();
   });
   ctx.save();ctx.translate(X(pos.x),Y(pos.y));ctx.rotate(-body.getAngle());ctx.scale(scale,-scale);
   ctx.globalAlpha=xray?.32:1;
@@ -171,7 +188,7 @@ function drawExhaust(){
     const life=p.age/p.life,r=(p.radius+p.age*.22)*scale;
     const px=X(p.x)+Math.sin(p.age*4+p.phase)*p.age*3,py=Y(p.y);
     if(p.y<terrainHeight(p.x)-.1)continue;
-    const shade=Math.round(165-p.dark*125),alpha=(.045+p.dark*.19)*(1-life)**2;
+    const shade=Math.round(165-p.dark*125),alpha=(.07+p.dark*.34)*(1-life)**2;
     const cloud=ctx.createRadialGradient(px,py,0,px,py,r);cloud.addColorStop(0,`rgba(${shade},${shade+3},${shade},${alpha})`);cloud.addColorStop(1,`rgba(${shade},${shade+3},${shade},0)`);
     circle(px,py,r,cloud);
   }

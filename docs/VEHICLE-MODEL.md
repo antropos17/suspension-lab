@@ -19,7 +19,9 @@ Tire spring frequency is 8.5 Hz with 0.85 damping. Smaller visual rims are rigid
 
 ## Exhaust
 
-Emission rate responds to smoothed accelerator input. Darkness responds to measured drive motor torque and a short positive-throttle transient. Particles inherit tailpipe point velocity, receive a rearward jet, then disperse with drag and buoyancy. Opacity fades with age. Local soot staining accumulates slowly around the tailpipe and resets with the run. Brake torque is excluded from load. The pool is capped at 180 and particle life at 2.5 seconds. Pause freezes simulation and particles. No runtime files or logs accumulate.
+Emission rate responds to smoothed accelerator input. Darkness responds to measured drive motor torque and a short positive-throttle transient. A soot intensity slider (0–6x, default 3x) scales generation and darkness; zero stops new emissions and existing particles fade out. Particles inherit tailpipe point velocity, receive a rearward jet, then disperse with drag and buoyancy. Opacity fades with age. Local soot staining accumulates slowly around the tailpipe and resets with the run. Brake torque is excluded from load. The pool is capped at 420 and particle life at 2.5 seconds. Pause freezes simulation and particles. No runtime files or logs accumulate.
+
+Rendering correction: the rubber contour and steel rim share the physical hub center and tire angular position. Only the loaded rubber contour flattens toward the road normal; the steel rim stays circular. Contact detection gates flattening, so airborne wheels are round. The lower contour is clamped to the compressed rolling radius and widens slightly at the sidewall. This does not change the rigid circular collision shape or introduce a deformable carcass.
 
 ## Evidence and limits
 
