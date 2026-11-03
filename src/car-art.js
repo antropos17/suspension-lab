@@ -1,9 +1,8 @@
 // A hand-drawn 1970s trail sedan. Geometry is in chassis-local metres.
 // Palette: oxblood enamel, ivory roof, cool glass, graphite rubber, brushed chrome.
-export const ARCH_RADIUS = .60;
-const ARCH_Y = -.55, SILL_Y = -.34;
-const archAngle = Math.asin((SILL_Y - ARCH_Y) / ARCH_RADIUS);
-const archWidth = Math.cos(archAngle) * ARCH_RADIUS;
+import { ARCH_X, ARCH_Y_RADIUS, ARCH_CENTER_Y as ARCH_Y, SILL_Y } from './vehicle-geometry.js';
+export { ARCH_RADIUS } from './vehicle-geometry.js';
+const archAngle=Math.asin((SILL_Y-ARCH_Y)/ARCH_Y_RADIUS),archWidth=Math.cos(archAngle)*ARCH_X;
 
 function bodyPath(c) {
   c.beginPath(); c.moveTo(-2.04, SILL_Y);
@@ -12,9 +11,9 @@ function bodyPath(c) {
   c.lineTo(.42,1.09); c.quadraticCurveTo(.55,1.07,.62,.99);
   c.lineTo(1.04,.43); c.lineTo(1.98,.36); c.quadraticCurveTo(2.09,.33,2.09,.22);
   c.lineTo(2.07,SILL_Y); c.lineTo(1.25+archWidth,SILL_Y);
-  c.arc(1.25,ARCH_Y,ARCH_RADIUS,archAngle,Math.PI-archAngle);
+  c.ellipse(1.25,ARCH_Y,ARCH_X,ARCH_Y_RADIUS,0,archAngle,Math.PI-archAngle);
   c.lineTo(-1.25+archWidth,SILL_Y);
-  c.arc(-1.25,ARCH_Y,ARCH_RADIUS,archAngle,Math.PI-archAngle);
+  c.ellipse(-1.25,ARCH_Y,ARCH_X,ARCH_Y_RADIUS,0,archAngle,Math.PI-archAngle);
   c.closePath();
 }
 
@@ -25,7 +24,7 @@ export function drawWheelWells(c) {
     c.save();c.beginPath();c.rect(x-.7,SILL_Y,1.4,1);c.clip();
     const shade=c.createRadialGradient(x,-.42,.1,x,-.42,.65);
     shade.addColorStop(0,'#111719');shade.addColorStop(1,'#353a37');
-    c.beginPath();c.arc(x,ARCH_Y,ARCH_RADIUS+.025,0,Math.PI);c.fillStyle=shade;c.fill();
+    c.beginPath();c.ellipse(x,ARCH_Y,ARCH_X+.025,ARCH_Y_RADIUS+.025,0,0,Math.PI);c.fillStyle=shade;c.fill();
     c.restore();
   }
   c.restore();
@@ -97,9 +96,9 @@ export function drawClassicBody(c, xray, soot) {
   }
   // Arch lips are concentric with the physical liner, outside the cutout.
   for(const x of [-1.25,1.25]){
-    c.beginPath();c.arc(x,ARCH_Y,ARCH_RADIUS+.026,archAngle,Math.PI-archAngle);
+    c.beginPath();c.ellipse(x,ARCH_Y,ARCH_X+.016,ARCH_Y_RADIUS+.016,0,archAngle,Math.PI-archAngle);
     c.strokeStyle='#d39a8b';c.lineWidth=.025;c.stroke();
-    c.beginPath();c.arc(x,ARCH_Y,ARCH_RADIUS+.055,archAngle,Math.PI-archAngle);
+    c.beginPath();c.ellipse(x,ARCH_Y,ARCH_X+.038,ARCH_Y_RADIUS+.038,0,archAngle,Math.PI-archAngle);
     c.strokeStyle='#522d34';c.lineWidth=.012;c.stroke();
   }
   const stain=c.createRadialGradient(-2,-.21,0,-2,-.21,.27);

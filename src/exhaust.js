@@ -36,8 +36,8 @@ export function createExhaust(random = Math.random) {
         carry--;
         // Saturation retires old puffs, never blocks fresh exhaust at the pipe.
         if (particles.length >= 420) particles.shift();
-        const point = sim.body.getWorldPoint({ x: -2.12, y: -.25 });
-        const velocity = sim.body.getLinearVelocityFromWorldPoint(point);
+        const point = sim.exhaustMount?.point ?? sim.body.getWorldPoint({ x: -2.12, y: -.25 });
+        const velocity = sim.exhaustMount?.velocity ?? sim.body.getLinearVelocityFromWorldPoint(point);
         const direction = sim.body.getWorldVector({ x: -1, y: -.07 });
         const jet = .5 + gas * 1.8, phase = random() * Math.PI * 2;
         particles.push({ x: point.x, y: point.y,

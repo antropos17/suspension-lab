@@ -1,11 +1,13 @@
 import { World, Vec2, Edge, Box, Circle, Polygon, WheelJoint, PrismaticJoint } from 'planck';
 import { terrainHeight, GROUND_START, GROUND_STEP, GROUND_COUNT } from './terrain.js';
+import { archPoint } from './vehicle-geometry.js';
+import { createExhaustMount } from './exhaust-mount.js';
 export { terrainHeight } from './terrain.js';
 
 export const FINISH = 260;
 export const STEP = 1 / 120;
 
-export function createSimulation({ frequency = 3.2, damping = .65, drive = 'awd' } = {}) {
+export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd' } = {}) {
   const world = new World(Vec2(0, -9.81));
   const ground = world.createBody();
   const points = [];
@@ -19,17 +21,17 @@ export function createSimulation({ frequency = 3.2, damping = .65, drive = 'awd'
     if (i < points.length - 1) edge.setNextVertex(points[i + 1]);
     ground.createFixture(edge, { friction: .95 });
   }
-  const body = world.createDynamicBody({ position: Vec2(3, 1.30), angularDamping: .6 });
+  const body = world.createDynamicBody({ position: Vec2(3, 1.22), angularDamping: .6 });
   body.createFixture(new Box(1.8, .32), { density: 180, friction: .4, filterGroupIndex: -1 });
   body.createFixture(new Box(.85, .36, Vec2(-.25, .55), 0), { density: 50, friction: .4, filterGroupIndex: -1 });
   // Engine forward and heavy drivetrain low in the chassis; finite pitch inertia.
   body.setMassData({ mass: body.getMass(), center: Vec2(.2, -.22), I: body.getMass() * 2.1 });
-  // Thin physical liners follow the visible semicircular wheel openings.
+  // Inner wheel tubs allow the tire to tuck behind the narrower painted lip.
   for (const x of [-1.25, 1.25]) for (let i = 0; i < 16; i++) {
     const a = i * Math.PI / 16, b = (i + 1) * Math.PI / 16;
-    const point = (angle, radius) => Vec2(x + Math.cos(angle) * radius, -.55 + Math.sin(angle) * radius);
-    // Four centimetres inside the paint cover finite solver contact tolerance.
-    body.createFixture(new Polygon([point(a,.56),point(a,.68),point(b,.68),point(b,.56)]), {
+    const point = (angle, inset) => {const p=archPoint(x,angle,inset);return Vec2(p.x,p.y);};
+    // The inner collision surface is inset from the wheel-tub envelope.
+    body.createFixture(new Polygon([point(a,.04),point(a,-.08),point(b,-.08),point(b,.04)]), {
       friction: .08, restitution: 0, filterCategoryBits: 4, filterMaskBits: 2, userData: 'arch'
     });
   }
@@ -45,9 +47,10 @@ export function createSimulation({ frequency = 3.2, damping = .65, drive = 'awd'
   });
   // Guides provide geometry only. Spring/damper forces use sprung axle mass,
   // rather than a wheel-joint frequency based on the much lighter hub mass.
-  const stops = rims.map(r => world.createJoint(new PrismaticJoint({ enableLimit: true, lowerTranslation: -.25, upperTranslation: .16 }, body, r, r.getPosition(), Vec2(0, 1))));
+  const stops = rims.map(r => world.createJoint(new PrismaticJoint({ enableLimit: true, lowerTranslation: -.25, upperTranslation: .24 }, body, r, r.getPosition(), Vec2(0, 1))));
   const joints = stops;
   const tires = wheels.map((w, i) => world.createJoint(new WheelJoint({ frequencyHz: 8.5, dampingRatio: .85, enableMotor: true, maxMotorTorque: 0 }, rims[i], w, w.getPosition(), Vec2(0, 1))));
+  const exhaustMount = createExhaustMount(body);
   let elapsed = 0;
   let engineLoad = 0, accelerator = 0;
   function suspensionForces() {
@@ -58,11 +61,11 @@ export function createSimulation({ frequency = 3.2, damping = .65, drive = 'awd'
       const stiffness = mass * omega * omega;
       const dampingForce = 2 * damping * mass * omega * speed * (speed > 0 ? .65 : 1.2);
       // A hydraulic blow-off prevents damping spikes on sharp bumps.
-      const damper = 4500 * Math.tanh(dampingForce / 4500);
-      const bump = Math.max(0, travel - .055) / .085;
+      const damper = 3000 * Math.tanh(dampingForce / 3000);
+      const bump = Math.max(0, travel - .14) / .10;
       const droop = Math.max(0, -.14 - travel) / .11;
       const force = -(mass * 9.81 + stiffness * (travel - .045) + damper
-        + 12000 * bump ** 3 - 5000 * droop ** 3);
+        + 6500 * bump ** 3 - 5000 * droop ** 3);
       const axis = body.getWorldVector(Vec2(0, 1));
       const f = Vec2(axis.x * force, axis.y * force);
       rims[i].applyForceToCenter(f, true);
@@ -70,7 +73,7 @@ export function createSimulation({ frequency = 3.2, damping = .65, drive = 'awd'
     });
   }
   return {
-    world, body, wheels, rims, joints, tires, stops, points,
+    world, body, wheels, rims, joints, tires, stops, points, exhaustMount,
     get elapsed() { return elapsed; },
     get engineLoad() { return engineLoad; },
     get accelerator() { return accelerator; },
@@ -88,6 +91,7 @@ export function createSimulation({ frequency = 3.2, damping = .65, drive = 'awd'
       suspensionForces();world.step(STEP / 2, 12, 10);
       const torque = tires.reduce((sum,j) => sum + Math.abs(j.getMotorTorque(2 / STEP)), 0);
       engineLoad += ((brake || !throttle ? 0 : Math.min(1, torque / 2400)) - engineLoad) * .04;
+      exhaustMount.step(STEP,accelerator);
       elapsed += STEP;
     }
   };

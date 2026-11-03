@@ -9,7 +9,7 @@ let sim, paused = false, finished = false, xray = false, drive = 'awd', accumula
 let width = 1000, height = 500, scale = 64;
 const keys = new Set(), touches = new Set();
 let exhaust = createExhaust();
-const presets = { comfort: [2, .4], trail: [3.2, .65], sport: [5.2, .85] };
+const presets = { comfort: [1.3, .4], trail: [1.7, .5], sport: [2.6, .65] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
   exhaust = createExhaust(); exhaust.setIntensity(+$('soot').value);
@@ -135,8 +135,10 @@ function car() {
   });
   ctx.save();ctx.translate(X(pos.x),Y(pos.y));ctx.rotate(-body.getAngle());ctx.scale(scale,-scale);
   drawClassicBody(ctx,xray,exhaust.soot);ctx.restore();
-  const tip=local(-2.12,-.25),pipe=local(-1.92,-.23);
-  line([[X(pipe.x),Y(pipe.y)],[X(tip.x),Y(tip.y)]],'#9a9e97',4);
+  const tip=sim.exhaustMount.point,pipe=local(-1.62,-.22),can=local(-1.87,-.24+sim.exhaustMount.offset*.7);
+  line([[X(pipe.x),Y(pipe.y)],[X(can.x),Y(can.y)],[X(tip.x),Y(tip.y)]],'#9a9e97',4);
+  circle(X(can.x),Y(can.y),4,'#626d6b');
+  const hanger=local(-1.87,-.12);line([[X(hanger.x),Y(hanger.y)],[X(can.x),Y(can.y)]],'#343a37',2);
   circle(X(tip.x),Y(tip.y),1.9,'#151b1d');
   if(xray)sim.rims.forEach((w,i)=>spring(local(i===0?-1.25:1.25,-.05),w.getPosition()));
 

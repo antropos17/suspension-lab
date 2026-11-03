@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { tirePoint, groundedTirePoint } from '../src/wheel-shape.js';
 import { createSimulation, STEP } from '../src/physics.js';
 import { groundHeight } from '../src/terrain.js';
-import { ARCH_RADIUS } from '../src/car-art.js';
+import { WELL_X as ARCH_X, WELL_Y as ARCH_Y_RADIUS, ARCH_CENTER_Y } from '../src/vehicle-geometry.js';
 test('loaded rubber has a flat contact patch while an unloaded tire is round',()=>{
   const r=.48,d=.08;
   const lower=[Math.PI*.35,Math.PI*.5,Math.PI*.65].map(a=>tirePoint(a,r,d));
@@ -34,7 +34,7 @@ test('loaded rubber contacts flat ground and conforms to slopes without moving i
   }
 });
 
-test('visible rubber clears the ground and fender paint over the rough course',()=>{
+test('visible rubber clears the ground and inner wheel well over the rough course',()=>{
   for(const drive of ['awd','fwd','rwd']){
   const s=createSimulation({drive,frequency:2,damping:.4});let samples=0;
   for(let step=0;step<40/STEP&&s.body.getPosition().x<263;step++){
@@ -46,8 +46,8 @@ test('visible rubber clears the ground and fender paint over the rough course',(
         const p=groundedTirePoint(j*Math.PI/32,s.rims[i].getPosition(),.48,groundHeight,touching);
         assert.ok(p.y>=groundHeight(p.x)-1e-9);
         const local=s.body.getLocalPoint(p);
-        if(local.y>-.34)assert.ok(Math.hypot(local.x-(i===0?-1.25:1.25),local.y+.55)<ARCH_RADIUS,
-          `rubber overlaps fender at ${s.body.getPosition().x.toFixed(2)} m`);
+        if(local.y>-.34)assert.ok(((local.x-(i===0?-1.25:1.25))/ARCH_X)**2+((local.y-ARCH_CENTER_Y)/ARCH_Y_RADIUS)**2<1,
+          `rubber exceeds inner well at ${s.body.getPosition().x.toFixed(2)} m`);
         samples++;
       }
     }

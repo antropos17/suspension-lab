@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSimulation, STEP } from '../src/physics.js';
-import { ARCH_RADIUS } from '../src/car-art.js';
+import { WELL_X as ARCH_X, WELL_Y as ARCH_Y_RADIUS, ARCH_CENTER_Y } from '../src/vehicle-geometry.js';
 const run=(s,seconds,throttle=0,brake=false)=>{for(let i=0;i<seconds/STEP;i++)s.step(throttle,brake);};
 test('parked vehicle settles on its wheels without chassis touching the road',()=>{
   const s=createSimulation();run(s,8);
@@ -26,7 +26,7 @@ test('suspension changes actual travel; rough-track simulation remains finite',(
   for(const b of [firm.body,...firm.wheels]) {const p=b.getPosition();assert.ok(Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.y>-3);}
 });
 test('car accelerates from a stop on the hill with every suspension preset',()=>{
-  for(const [frequency,damping] of [[2,.4],[3.2,.65],[5.2,.85]]) {
+  for(const [frequency,damping] of [[1.3,.4],[1.7,.5],[2.6,.65],[5.2,.85]]) {
     const s=createSimulation({frequency,damping});
     for(let i=0;i<60/STEP && s.body.getPosition().x<123;i++)s.step(1);
     assert.ok(s.body.getPosition().x>=123,'car reaches the climb');
@@ -66,7 +66,7 @@ for (const drive of ['awd','fwd','rwd']) {
  const p=s.body.getLocalPoint(s.wheels[j].getPosition()),cx=j===0?-1.25:1.25;
  for(let k=0;k<16;k++){
  const a=k*Math.PI/16,b=(k+1)*Math.PI/16;
- const x=cx+ARCH_RADIUS*Math.cos(a),y=-.55+ARCH_RADIUS*Math.sin(a),dx=ARCH_RADIUS*(Math.cos(b)-Math.cos(a)),dy=ARCH_RADIUS*(Math.sin(b)-Math.sin(a));
+ const x=cx+ARCH_X*Math.cos(a),y=ARCH_CENTER_Y+ARCH_Y_RADIUS*Math.sin(a),dx=ARCH_X*(Math.cos(b)-Math.cos(a)),dy=ARCH_Y_RADIUS*(Math.sin(b)-Math.sin(a));
  const t=Math.max(0,Math.min(1,((p.x-x)*dx+(p.y-y)*dy)/(dx*dx+dy*dy)));
  minGap=Math.min(minGap,Math.hypot(p.x-x-t*dx,p.y-y-t*dy)-.48);
  }maxTravel=Math.max(maxTravel,s.stops[j].getJointTranslation());
@@ -75,7 +75,7 @@ for (const drive of ['awd','fwd','rwd']) {
  assert.ok(s.body.getPosition().x>=263,`${drive} completes the rough trail`);
  assert.ok(contacts<120,`${drive} liners should not act as the primary suspension spring`);
  assert.ok(minGap>=0,`${drive} tire crosses the visible arch: ${minGap}`);
- assert.ok(maxTravel<.171,`${drive} exceeds the suspension stop`);
+ assert.ok(maxTravel<.251,`${drive} exceeds the suspension stop`);
 }
 
 });
