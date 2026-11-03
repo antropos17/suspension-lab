@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#243e3b"><title>Suspension Lab — Little wheels. Real physics.</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header><div class="brand"><span class="brand-icon">◉</span><div><h1>Suspension Lab</h1><p>Little wheels. Real physics.</p></div></div><div class="header-actions"><button id="pause" aria-keyshortcuts="P">Pause <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Restart <kbd>R</kbd></button></div></header>
+    <section class="stage" aria-label="Driving game">
+      <canvas id="game" aria-label="Side view of an off-road car with simulated suspension. Drive with arrow keys or the buttons below."></canvas>
+      <div class="hud"><div><strong id="speed">0</strong><span>km/h</span></div><div class="route"><span id="distance">0 / 260 m</span><progress id="progress" max="260" value="0" aria-label="Track progress"></progress></div><div class="timer"><span id="time">0:00.0</span><small>Trail time</small></div></div>
+      <div id="notice" class="notice" role="status">A small trail. A proper little adventure.</div>
+      <div class="terrain-label">Juniper trail <span>260 m</span></div>
+      <div id="overlay" class="overlay" hidden><div><p id="overlay-caption">Take a breath.</p><h2 id="overlay-title">Paused</h2><button id="resume">Keep driving</button></div></div>
+      <div class="pedals"><button data-control="reverse" aria-label="Reverse">◀</button><button data-control="brake" class="brake" aria-label="Brake">Brake</button><button data-control="forward" aria-label="Accelerate">▶</button></div>
+    </section>
+    <section class="workbench" aria-label="Suspension settings">
+      <div class="intro"><h2>Feel every bump.</h2><p>Two independent springs.<br>One very bouncy little truck.</p><button id="xray" aria-pressed="false">Show chassis</button></div>
+      <div class="tuning"><label for="spring">Spring stiffness <output id="spring-value">3.2 Hz</output></label><input id="spring" type="range" min="1.5" max="6" value="3.2" step="0.1"><div class="range-labels"><span>Soft</span><span>Firm</span></div><label for="damping">Shock damping <output id="damping-value">0.65</output></label><input id="damping" type="range" min="0.1" max="1.2" value="0.65" step="0.05"><div class="range-labels"><span>Bouncy</span><span>Planted</span></div></div>
+      <div class="setup"><span>Quick setup</span><div class="presets"><button data-preset="comfort">Comfort</button><button data-preset="trail" class="selected">Trail</button><button data-preset="sport">Sport</button></div><div class="suspension-readout"><span>Rear <meter id="rear" min="-0.6" max="0.6" value="0" aria-label="Rear suspension travel"></meter></span><span>Front <meter id="front" min="-0.6" max="0.6" value="0" aria-label="Front suspension travel"></meter></span></div><p>Change the setup while you drive.</p></div>
+    </section>
+    <footer><span><kbd>←</kbd> <kbd>→</kbd> Drive <i></i><kbd>Space</kbd> Brake <i></i><kbd>R</kbd> Restart</span><span>Made for the bumps along the way.</span></footer>
+  </main>
+  <script src="game.js"></script>
+</body></html>
