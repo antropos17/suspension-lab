@@ -3,8 +3,10 @@ import { createExhaust } from './exhaust.js';
 import { TIRE_RADIUS } from './pneumatic-tire.js';
 import { groundHeight } from './terrain.js';
 import { drawClassicBody, drawWheelWells } from './car-art.js';
+import { createBakuBackdrop } from './baku-background.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
+const drawBaku=createBakuBackdrop();
 let sim, paused = false, finished = false, xray = false, drive = 'awd', accumulator = 0, last = performance.now(), camera = { x: 3, y: 1.4 };
 let width = 1000, height = 500, scale = 64;
 const keys = new Set(), touches = new Set();
@@ -15,7 +17,7 @@ function reset() {
   exhaust = createExhaust(); exhaust.setIntensity(+$('soot').value);
   clearInput(); sim = createSimulation({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value });
   paused = finished = false; accumulator = 0; camera = { x: 3, y: 1.4 }; $('overlay').hidden = true; $('pause').textContent = 'Pause';
-  $('notice').textContent = 'A small trail. A proper little adventure.';
+  $('notice').textContent = 'Above the Caspian. Into the city of winds.';
 }
 function pause(value = !paused) {
   if (finished) return;
@@ -64,28 +66,15 @@ function polygon(points, fill, stroke = null, lineWidth = 1) { ctx.beginPath(); 
 function line(points, color, thickness) {ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle=color;ctx.lineWidth=thickness;ctx.lineJoin='round';ctx.stroke();}
 function circle(x,y,r,fill,stroke,width=1) {ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}}
 function scenery() {
-  const sky = ctx.createLinearGradient(0,0,0,height); sky.addColorStop(0,'#c3dad3');sky.addColorStop(1,'#e4e8cb');ctx.fillStyle=sky;ctx.fillRect(0,0,width,height);
-  circle(width*.79,height*.29,34,'#f5edcd');
-  for(const [layer,color,base,amp] of [[.12,'#a8bfb1',.52,80],[.25,'#8eac9b',.65,65],[.42,'#709281',.78,42]]) {
-    const p=[[0,height]];
-    for(let px=-10;px<=width+10;px+=10) {const t=px+camera.x*scale*layer;p.push([px,height*base-amp*(.55*Math.sin(t*.005)+.32*Math.sin(t*.011+2)+.18*Math.sin(t*.021))]);}
-    p.push([width,height]);polygon(p,color);
-  }
+  drawBaku(ctx,{width,height,camera,scale});
   const left = camera.x - width*.34/scale - 3, right = left + width/scale + 6;
-  for(let i=Math.floor(left/6);i<right/6;i++) {
-    const x=i*6+2, y=groundHeight(x), px=X(x), py=Y(y), size=17+Math.abs(Math.sin(i*12))*30;
-    if(x<10 || (x>54&&x<91))continue;
-    ctx.fillStyle='#476a50';ctx.fillRect(px-2,py-size*.55,4,size*.55);
-    polygon([[px-size*.38,py-size*.35],[px,py-size*1.6],[px+size*.38,py-size*.35]],'#557a60');
-    polygon([[px-size*.3,py-size*.8],[px,py-size*1.9],[px+size*.3,py-size*.8]],'#60866a');
-  }
   const road=visibleGround(left,right).map(p=>[X(p.x),Y(p.y)]);
   const soil=[[road[0][0],height+10],...road,[road.at(-1)[0],height+10]];
-  polygon(soil,'#6c7153');
+  polygon(soil,'#746c57');
   // All road paint lies below the collision surface, including its stroke.
   ctx.save();ctx.beginPath();soil.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip();
-  line(road,'#c6b584',12);line(road,'#a6a070',2);ctx.restore();
-  for(let i=Math.floor(left*2);i<right*2;i++) {const x=i*.5;circle(X(x),Y(groundHeight(x))+18+Math.abs(Math.sin(i*43))*70,1.2,'#8d8b65');}
+  line(road,'#cdb58c',12);line(road,'#a89c78',2);ctx.restore();
+  for(let i=Math.floor(left*2);i<right*2;i++) {const x=i*.5;circle(X(x),Y(groundHeight(x))+18+Math.abs(Math.sin(i*43))*70,1.2,'#a18e6e');}
   for(const [x,label] of [[1,'Start'],[56,'Rumble'],[118,'Climb'],[FINISH+3,'Finish']]) {
     if(x<left||x>right)continue;
     const px=X(x),py=Y(groundHeight(x));line([[px,py],[px,py-64]],'#58644d',3);ctx.fillStyle='#eae4bf';ctx.fillRect(px-23,py-78,58,23);ctx.fillStyle='#4c6148';ctx.font='11px Trebuchet MS';ctx.textAlign='center';ctx.fillText(label,px+6,py-62);
@@ -156,7 +145,7 @@ function frame(now) {
   const distance=Math.max(0,Math.min(FINISH,pos.x-3));$('speed').textContent=Math.round(Math.abs(sim.body.getLinearVelocity().x)*3.6);$('distance').textContent=`${Math.floor(distance)} / 260 m`;$('progress').value=finished?FINISH:distance;$('time').textContent=formatTime(sim.elapsed);
   $('pressure-live').textContent=`Rear ${sim.tires[0].pressureBar.toFixed(2)} / Front ${sim.tires[1].pressureBar.toFixed(2)} bar`;
   $('rear').value=sim.joints[0].getJointTranslation();$('front').value=sim.joints[1].getJointTranslation();
-  if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Tipped over? Press R for a fresh start.':pos.x>53&&pos.x<91?'The rumble strip. Watch those springs.':pos.x>116&&pos.x<153?'Easy on the climb. Let the suspension work.':sim.elapsed<5?'A small trail. A proper little adventure.':'';}
+  if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Tipped over? Press R for a fresh start.':pos.x>53&&pos.x<91?'The rumble strip. Watch those springs.':pos.x>116&&pos.x<153?'Easy on the climb. Let the suspension work.':sim.elapsed<5?'Above the Caspian. Into the city of winds.':'';}
   requestAnimationFrame(frame);
 }
 function formatTime(t){return `${Math.floor(t/60)}:${(t%60).toFixed(1).padStart(4,'0')}`;}

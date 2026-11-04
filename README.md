@@ -16,6 +16,10 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 - Tire pressure controls nominal inflation from 0.6 to 3.2 bar and survives restart. Lower pressure physically deforms the carcass and changes road contact; actual operating pressures are shown for both axles. Show chassis reveals the tire network.
 - Suspension guides limit compression and droop. Physical inner fender liners stop tires from moving through the wings; hubs follow chassis rotation and transmit drive reaction to it.
 
+## Scenery
+
+An original layered Baku Bay panorama replaces the former woodland scenery: Flame Towers, Maiden Tower, limestone Old City silhouettes, waterfront facades, the rolled Carpet Museum, Baku Eye and the Caspian promenade. It is a compressed scenic composite rather than an exact street map. Two cached Canvas atlases provide offline parallax without remote image downloads. Research sources and design decisions are recorded in `docs/BAKU-BACKGROUND.md`.
+
 ## Physics
 
 Planck provides rigid contacts and joints. Each pneumatic tire now has 32 independent tread contact bodies, elastic belt/sidewall links and an isothermal pressure-volume model around a rigid rim. Pressure changes actual geometry and hub support; the renderer follows those contact bodies. Drive and brake torque pass through the rim and carcass into road contacts. Gravity is 9.81 m/s²; physics advances at 120 Hz with eight 960 Hz solver substeps for the default ring. This is a physically deformable 2D prototype, not calibrated rubber FEA or a validated full vehicle model. It does not model temperature, punctures, lateral tire deformation or 3D weight transfer.
