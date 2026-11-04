@@ -11,9 +11,10 @@ export function terrainHeight(x) {
 }
 
 // The visible surface and tire deformation use the actual collision segments.
+const heights=Array.from({length:GROUND_COUNT+1},(_,i)=>terrainHeight(GROUND_START+i*GROUND_STEP));
 export function groundHeight(x) {
   const index = Math.max(0, Math.min(GROUND_COUNT - 1, Math.floor((x - GROUND_START) / GROUND_STEP)));
   const start = GROUND_START + index * GROUND_STEP;
   const t = Math.max(0, Math.min(1, (x - start) / GROUND_STEP));
-  return terrainHeight(start) * (1 - t) + terrainHeight(start + GROUND_STEP) * t;
+  return heights[index] * (1 - t) + heights[index+1] * t;
 }

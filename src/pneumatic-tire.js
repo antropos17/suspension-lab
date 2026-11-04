@@ -1,6 +1,8 @@
 import {Vec2,Circle,DistanceJoint} from 'planck';
 
-export const ATMOSPHERE=101325, TIRE_RADIUS=.48, RIM_RADIUS=.245;
+import { TIRE_RADIUS, RIM_RADIUS } from './vehicle-constants.js';
+export { TIRE_RADIUS, RIM_RADIUS } from './vehicle-constants.js';
+export const ATMOSPHERE=101325;
 // 2D pneumatic carcass. Rigid contact beads are elastically linked, not a rigid
 // tire collider. Gas work is p*dV with V=width*(polygon area - rim area).
 export function createPneumaticTire(world,rim,{pressure=2.2,count=32}={}){

@@ -5,8 +5,8 @@ import { createPneumaticTire, RIM_RADIUS } from './pneumatic-tire.js';
 import { createExhaustMount } from './exhaust-mount.js';
 export { terrainHeight } from './terrain.js';
 
-export const FINISH = 260;
-export const STEP = 1 / 120;
+import { STEP } from './vehicle-constants.js';
+export { FINISH, STEP } from './vehicle-constants.js';
 
 export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd', pressure = 2.2, nodeCount = 32, substeps = 8, heightAt = terrainHeight } = {}) {
   substeps=Math.max(substeps,Math.ceil(nodeCount/32)*8);

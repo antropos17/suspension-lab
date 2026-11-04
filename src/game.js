@@ -1,27 +1,37 @@
-import { createSimulation, FINISH, STEP } from './physics.js';
+import { createSimulationClient } from './simulation-client.js';
+import { FINISH, STEP, TIRE_RADIUS } from './vehicle-constants.js';
 import { createExhaust } from './exhaust.js';
-import { TIRE_RADIUS } from './pneumatic-tire.js';
 import { groundHeight } from './terrain.js';
 import { drawClassicBody, drawWheelWells } from './car-art.js';
 import { createBakuBackdrop } from './baku-background.js';
+import { createSmokeRenderer } from './smoke-renderer.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
 const drawBaku=createBakuBackdrop();
+const drawSmoke=createSmokeRenderer();
+// Opt-in, bounded diagnostics. No trace is collected during normal play.
+const profiling=new URLSearchParams(location.search).has('profile');
+const samples=[];
+let profileTicks=0;
+const profileOutput=profiling?document.body.appendChild(document.createElement('output')):null;
+if(profileOutput){profileOutput.id='frame-profile';profileOutput.hidden=true;}
 let sim, paused = false, finished = false, xray = false, drive = 'awd', accumulator = 0, last = performance.now(), camera = { x: 3, y: 1.4 };
-let width = 1000, height = 500, scale = 64;
+let width = 1000, height = 500, scale = 64, hudAt=0;
 const keys = new Set(), touches = new Set();
-let exhaust = createExhaust();
+let exhaust = createExhaust(), smokeTime=0;
 const presets = { comfort: [1.3, .4], trail: [1.7, .5], sport: [2.6, .65] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
+  samples.length=0;profileTicks=0;
   exhaust = createExhaust(); exhaust.setIntensity(+$('soot').value);
-  clearInput(); sim = createSimulation({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value });
+  clearInput(); sim??=createSimulationClient();smokeTime=0;
+  sim.reset({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value });
   paused = finished = false; accumulator = 0; camera = { x: 3, y: 1.4 }; $('overlay').hidden = true; $('pause').textContent = 'Pause';
   $('notice').textContent = 'Above the Caspian. Into the city of winds.';
 }
 function pause(value = !paused) {
   if (finished) return;
-  paused = value; accumulator = 0; clearInput(); $('overlay').hidden = !paused; $('pause').textContent = paused ? 'Resume' : 'Pause';
+  paused = value; accumulator = 0; sim.suspend();clearInput(); $('overlay').hidden = !paused; $('pause').textContent = paused ? 'Resume' : 'Pause';
   $('overlay-caption').textContent = 'Take a breath.'; $('overlay-title').textContent = 'Paused'; $('resume').textContent = 'Keep driving';
 }
 function tune() {
@@ -59,8 +69,9 @@ new ResizeObserver(resize).observe(canvas);
 const X = x => width * .34 + (x - camera.x) * scale;
 const Y = y => height * .57 - (y - camera.y) * scale;
 function visibleGround(left,right) {
-  const points=sim.points.filter(p=>p.x>=left-.4&&p.x<=right+.4);
-  return [{x:left-.4,y:groundHeight(left-.4)},...points,{x:right+.4,y:groundHeight(right+.4)}];
+  // The grid is ordered and uniform; visit the visible slice, not all 951 points.
+  const first=Math.max(0,Math.ceil((left-.4+40)/.4)),end=Math.min(sim.points.length,Math.floor((right+.4+40)/.4)+1);
+  return [{x:left-.4,y:groundHeight(left-.4)},...sim.points.slice(first,end),{x:right+.4,y:groundHeight(right+.4)}];
 }
 function polygon(points, fill, stroke = null, lineWidth = 1) { ctx.beginPath(); points.forEach(([x,y], i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y)); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); if(stroke) {ctx.strokeStyle=stroke;ctx.lineWidth=lineWidth;ctx.stroke();} }
 function line(points, color, thickness) {ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.strokeStyle=color;ctx.lineWidth=thickness;ctx.lineJoin='round';ctx.stroke();}
@@ -131,21 +142,37 @@ function car() {
 
 }
 function frame(now) {
+  const start=profiling?performance.now():0;
+  const frameGap=now-last;
   const dt=Math.min((now-last)/1000,.05);last=now;
+  if(!sim.ready){
+    scenery();
+    if(sim.error){$('notice').textContent='The simulation could not start. Reload the page to retry.';}
+    requestAnimationFrame(frame);return;
+  }
   if(!paused&&!finished){
-    accumulator+=dt;
     const forward=keys.has('ArrowRight')||keys.has('ArrowUp')||keys.has('KeyD')||touches.has('forward');
     const reverse=keys.has('ArrowLeft')||keys.has('ArrowDown')||keys.has('KeyA')||touches.has('reverse');
     const brake=keys.has('Space')||touches.has('brake');
-    while(accumulator>=STEP){sim.step(Number(forward)-Number(reverse),brake);exhaust.step(sim,STEP);accumulator-=STEP;}
+    sim.advance(dt,Number(forward)-Number(reverse),brake);
+    accumulator=Math.min(.05,accumulator+Math.max(0,sim.elapsed-smokeTime));smokeTime=sim.elapsed;
+    while(accumulator>=STEP-1e-10){exhaust.step(sim,STEP);accumulator-=STEP;}
     if(sim.body.getPosition().x>=FINISH+3){finished=true;clearInput();$('overlay').hidden=false;$('overlay-title').textContent='Trail complete!';$('overlay-caption').textContent=`260 metres, every bump earned. ${formatTime(sim.elapsed)}`;$('resume').textContent='Drive again';}
   }
+  const physicsEnd=profiling?performance.now():0;
   const pos=sim.body.getPosition();camera.x+=(pos.x-camera.x)*Math.min(1,dt*5);camera.y+=(pos.y-camera.y)*Math.min(1,dt*3);
-  scenery();drawExhaust();car();
+  scenery();const sceneryEnd=profiling?performance.now():0;drawExhaust();const smokeEnd=profiling?performance.now():0;car();
+  if(now>=hudAt){hudAt=now+100;
   const distance=Math.max(0,Math.min(FINISH,pos.x-3));$('speed').textContent=Math.round(Math.abs(sim.body.getLinearVelocity().x)*3.6);$('distance').textContent=`${Math.floor(distance)} / 260 m`;$('progress').value=finished?FINISH:distance;$('time').textContent=formatTime(sim.elapsed);
   $('pressure-live').textContent=`Rear ${sim.tires[0].pressureBar.toFixed(2)} / Front ${sim.tires[1].pressureBar.toFixed(2)} bar`;
   $('rear').value=sim.joints[0].getJointTranslation();$('front').value=sim.joints[1].getJointTranslation();
   if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Tipped over? Press R for a fresh start.':pos.x>53&&pos.x<91?'The rumble strip. Watch those springs.':pos.x>116&&pos.x<153?'Easy on the climb. Let the suspension work.':sim.elapsed<5?'Above the Caspian. Into the city of winds.':'';}
+  }
+  if(profiling&&!paused){
+    samples.push({gap:frameGap,physics:physicsEnd-start,scenery:sceneryEnd-physicsEnd,smoke:smokeEnd-sceneryEnd,total:performance.now()-start});
+    if(samples.length>300)samples.shift();
+    if(++profileTicks%30===0){const report={frames:samples.length,particles:exhaust.particles.length,workerMs:sim.workerMs,elapsed:sim.elapsed,x:pos.x,accelerator:sim.accelerator};for(const key of ['gap','physics','scenery','smoke','total']){const values=samples.map(s=>s[key]).sort((a,b)=>a-b);report[key]={mean:values.reduce((a,b)=>a+b,0)/values.length,p95:values[Math.floor((values.length-1)*.95)]};}profileOutput.textContent=JSON.stringify(report);}
+  }
   requestAnimationFrame(frame);
 }
 function formatTime(t){return `${Math.floor(t/60)}:${(t%60).toFixed(1).padStart(4,'0')}`;}
@@ -158,22 +185,11 @@ function drawExhaust(){
   ctx.lineTo(X(road.at(-1).x),-height);ctx.closePath();ctx.clip();
   for(const p of exhaust.particles){
     const life=p.age/p.life,r=(p.radius+.32*Math.sqrt(p.age)+p.age*.055)*scale;
-    const shade=Math.round(142-p.dark*111);
     const fade=Math.min(1,p.age/.08)*(1-life)**1.25;
     const alpha=(.055+p.dark*.22)*fade/(1+p.age*.22);
     if(alpha<.002)continue;
-    ctx.save();ctx.translate(X(p.x),Y(p.y));ctx.rotate(p.phase+p.age*.2);ctx.scale(p.stretch,1);
-    // Asymmetric overlapping lobes leave soft scalloped edges as clouds merge.
-    for(let k=0;k<3;k++){
-      const a=p.phase+k*2.1,offset=r*.25;
-      const px=Math.cos(a)*offset,py=Math.sin(a)*offset;
-      const cloud=ctx.createRadialGradient(px,py,r*.08,px,py,r*.8);
-      cloud.addColorStop(0,`rgba(${shade},${shade+3},${shade+5},${alpha*.65})`);
-      cloud.addColorStop(.4,`rgba(${shade+8},${shade+10},${shade+11},${alpha*.44})`);
-      cloud.addColorStop(1,`rgba(${shade+15},${shade+17},${shade+18},0)`);
-      circle(px,py,r*.8,cloud);
-    }
-    ctx.restore();
+    if(X(p.x)+r*p.stretch<0||X(p.x)-r*p.stretch>width||Y(p.y)+r<0||Y(p.y)-r>height)continue;
+    drawSmoke(ctx,p,X(p.x),Y(p.y),r,alpha);
   }
   ctx.restore();
 }

@@ -18,7 +18,7 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 
 ## Scenery
 
-An original layered Baku Bay panorama replaces the former woodland scenery: Flame Towers, Maiden Tower, limestone Old City silhouettes, waterfront facades, the rolled Carpet Museum, Baku Eye and the Caspian promenade. It is a compressed scenic composite rather than an exact street map. Two cached Canvas atlases provide offline parallax without remote image downloads. Research sources and design decisions are recorded in `docs/BAKU-BACKGROUND.md`.
+An original detailed Baku panorama features reflective Flame Towers, the banded limestone Maiden Tower, dense waterfront facades, the rolled Carpet Museum and the Caspian promenade. It is AI-generated architectural artwork, with compressed positions and scales, rather than a geographic photograph. One local image and cached sky/sea drawing provide offline parallax. Research, the generation prompt and reconstruction limits are recorded in `docs/BAKU-BACKGROUND.md`.
 
 ## Physics
 
@@ -30,7 +30,9 @@ Reference: https://piqnt.dev/planck.js/docs/joint/distance-joint.html (spring fr
 
 The revised suspension uses supported axle mass, static preload, asymmetric damping with blow-off and progressive bump/droop buffers. Smaller rims move independently within the compliant tire. An older-diesel exhaust effect responds to accelerator transients and measured drive load, with slowly accumulating tailpipe soot. See `docs/VEHICLE-MODEL.md` for equations, research sources, measurements and limitations.
 
-Node.js 22 or newer. Run `npm ci`, `npm test`, `npm run lint`, `npm run build`. Source lives in `src`; static interface and bundled output live in `dist`. Dependencies are pinned in `package-lock.json`. Rebuild after source edits.
+Node.js 22 or newer. Run `npm ci`, `npm test`, `npm run lint`, `npm run build`. Source lives in `src`; static interface, the local panorama and bundled output live in `dist`. The build produces both `game.js` and `physics-worker.js`; serve both through the local HTTP server. Dependencies are pinned in `package-lock.json`. Rebuild after source edits.
+
+Physics runs in a dedicated Web Worker with unchanged fixed-step tire/suspension solving and bounded catch-up. Smoke sprites and terrain samples are cached; HUD writes are limited to 10 Hz. The static server revalidates files with ETags and retains at most 16 files / 16 MiB in memory. Add `?profile` to the local game URL for bounded in-memory frame timing diagnostics, exposed in the hidden `frame-profile` output for development inspection. It is not a hardware-independent FPS guarantee.
 
 ## Storage
 
