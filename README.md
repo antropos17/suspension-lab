@@ -32,7 +32,7 @@ The revised suspension uses supported axle mass, static preload, asymmetric damp
 
 Node.js 22 or newer. Run `npm ci`, `npm test`, `npm run lint`, `npm run build`. Source lives in `src`; static interface, the local panorama and bundled output live in `dist`. The build produces both `game.js` and `physics-worker.js`; serve both through the local HTTP server. Dependencies are pinned in `package-lock.json`. Rebuild after source edits.
 
-Physics runs in a dedicated Web Worker with unchanged fixed-step tire/suspension solving and bounded catch-up. Smoke sprites and terrain samples are cached; HUD writes are limited to 10 Hz. The static server revalidates files with ETags and retains at most 16 files / 16 MiB in memory. Add `?profile` to the local game URL for bounded in-memory frame timing diagnostics, exposed in the hidden `frame-profile` output for development inspection. It is not a hardware-independent FPS guarantee.
+Physics runs in a dedicated Web Worker with unchanged fixed-step tire/suspension solving and bounded catch-up. A short delayed snapshot buffer interpolates all vehicle components between solved 120 Hz states; the horizontal camera shares that pose. Soft smoke uses a half-resolution compositing layer while the car stays sharp; paused canvases stop redundant drawing. Smoke sprites and terrain samples are cached; HUD writes are limited to 10 Hz. The static server revalidates files with ETags and retains at most 16 files / 16 MiB in memory. Add `?profile` to the local game URL for bounded in-memory frame timings, buffer occupancy, render-clock holds and draw count in the hidden `frame-profile` output. It is not a hardware-independent FPS guarantee.
 
 ## Storage
 

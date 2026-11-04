@@ -19,6 +19,8 @@ test('worker runs the unchanged solver and preserves every contact-node position
    direct.setDrive(drive);
    for(let i=0;i<12;i++){
     reply=await request({type:'step',generation:1,settings:{...config,drive},steps:6,throttle:1,brake:false});
+    assert.equal(reply.frames.length,6,'preserve every fixed step for render interpolation');
+    for(let j=1;j<6;j++)assert.ok(Math.abs(reply.frames[j].elapsed-reply.frames[j-1].elapsed-STEP)<1e-10);
     for(let j=0;j<6;j++)direct.step(1,false);
    }
    assert.deepEqual(reply.state,snapshot(direct));

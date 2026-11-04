@@ -19,6 +19,7 @@ export function createPhysicsHost(send) {
   let sim, generation=0, settings={};
   return message => {
     const started=performance.now();
+    const frames=[];
     try {
       if(message.type==='reset') {
         generation=message.generation;
@@ -33,9 +34,10 @@ export function createPhysicsHost(send) {
         // Never process an unbounded catch-up job after a suspended tab.
         const steps=Math.max(0,Math.min(6,Math.floor(message.steps)||0));
         const throttle=Math.max(-1,Math.min(1,Number(message.throttle)||0));
-        for(let i=0;i<steps;i++)sim.step(throttle,!!message.brake);
+        for(let i=0;i<steps;i++){sim.step(throttle,!!message.brake);frames.push(snapshot(sim));}
       } else return;
-      send({generation,state:snapshot(sim),workerMs:performance.now()-started});
+      if(!frames.length)frames.push(snapshot(sim));
+      send({generation,state:frames.at(-1),frames,workerMs:performance.now()-started});
     } catch(error) {
       send({generation:message.generation,error:error.message});
     }

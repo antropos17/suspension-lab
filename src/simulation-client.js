@@ -1,11 +1,13 @@
 import { STEP } from './vehicle-constants.js';
 import { GROUND_COUNT, GROUND_START, GROUND_STEP, terrainHeight } from './terrain.js';
+import { createSnapshotPlayback } from './snapshot-playback.js';
 
 // At most one worker job is in flight. New input replaces queued input rather
 // than building a message backlog. Reset generations reject stale replies.
 export function createSimulationClient(worker=new Worker('/physics-worker.js')) {
   let state, generation=0, pending=false, accumulator=0, settings={};
   const client={ready:false,error:null,workerMs:0};
+  const playback=createSnapshotPlayback();
   const body={
     getPosition:()=>state.body.position,
     getAngle:()=>state.body.angle,
@@ -35,6 +37,7 @@ export function createSimulationClient(worker=new Worker('/physics-worker.js')) 
     suspend(){accumulator=0;},
     advance(dt,throttle,brake){
       if(!client.ready||client.error)return;
+      playback.advance(dt);
       accumulator=Math.min(STEP*6,accumulator+Math.max(0,dt));
       const steps=Math.min(6,Math.floor((accumulator+1e-10)/STEP));
       if(pending||!steps)return;
@@ -45,11 +48,15 @@ export function createSimulationClient(worker=new Worker('/physics-worker.js')) 
   });
   // Getters must stay live: Object.assign would evaluate them prematurely.
   for(const key of ['elapsed','engineLoad','accelerator','exhaustMount'])Object.defineProperty(client,key,{get:()=>state?.[key]??(key==='exhaustMount'?null:0),configurable:true});
+  Object.defineProperty(client,'bufferMs',{get:()=>playback.bufferMs});
+  Object.defineProperty(client,'renderHolds',{get:()=>playback.holds});
   worker.onmessage=({data})=>{
     if(data.generation!==generation)return;
     pending=false;
     if(data.error){client.error=data.error;client.ready=false;return;}
-    state=data.state;client.workerMs=data.workerMs;client.ready=true;
+    if(!client.ready){playback.reset(data.state);state=playback.state;}
+    else playback.push(data.frames??[data.state]);
+    client.workerMs=data.workerMs;client.ready=true;
   };
   worker.onerror=event=>{client.error=event.message||'Physics worker failed';client.ready=false;};
   return client;

@@ -3,8 +3,9 @@
 const rect=(c,x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
 function line(c,points,color,width=1){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.strokeStyle=color;c.lineWidth=width;c.stroke();}
 function ellipse(c,x,y,rx,ry,color){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=color;c.fill();}
-export function createBakuBackdrop(){
+export function createBakuBackdrop(invalidate=()=>{}){
  const panorama=new Image();panorama.src='/assets/baku-panorama.png';panorama.decoding='async';
+ panorama.onload=invalidate;
  const wash=document.createElement('canvas');let cachedWidth=0,cachedHeight=0;
  return function drawBaku(c,{width,height,camera,scale}){
   const unit=Math.max(.65,Math.min(1.3,height/440));

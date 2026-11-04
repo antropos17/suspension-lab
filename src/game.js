@@ -7,22 +7,25 @@ import { createBakuBackdrop } from './baku-background.js';
 import { createSmokeRenderer } from './smoke-renderer.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
-const drawBaku=createBakuBackdrop();
+const smokeCanvas=document.createElement('canvas'),smokeCtx=smokeCanvas.getContext('2d');
+const SMOKE_RESOLUTION=.5;
+const drawBaku=createBakuBackdrop(()=>{needsRedraw=true;});
 const drawSmoke=createSmokeRenderer();
 // Opt-in, bounded diagnostics. No trace is collected during normal play.
 const profiling=new URLSearchParams(location.search).has('profile');
 const samples=[];
-let profileTicks=0;
+let profileTicks=0,drawCount=0;
 const profileOutput=profiling?document.body.appendChild(document.createElement('output')):null;
 if(profileOutput){profileOutput.id='frame-profile';profileOutput.hidden=true;}
 let sim, paused = false, finished = false, xray = false, drive = 'awd', accumulator = 0, last = performance.now(), camera = { x: 3, y: 1.4 };
-let width = 1000, height = 500, scale = 64, hudAt=0;
+let width = 1000, height = 500, scale = 64, hudAt=0, needsRedraw=true;
 const keys = new Set(), touches = new Set();
 let exhaust = createExhaust(), smokeTime=0;
 const presets = { comfort: [1.3, .4], trail: [1.7, .5], sport: [2.6, .65] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
-  samples.length=0;profileTicks=0;
+  needsRedraw=true;
+  samples.length=0;profileTicks=0;drawCount=0;
   exhaust = createExhaust(); exhaust.setIntensity(+$('soot').value);
   clearInput(); sim??=createSimulationClient();smokeTime=0;
   sim.reset({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value });
@@ -31,7 +34,7 @@ function reset() {
 }
 function pause(value = !paused) {
   if (finished) return;
-  paused = value; accumulator = 0; sim.suspend();clearInput(); $('overlay').hidden = !paused; $('pause').textContent = paused ? 'Resume' : 'Pause';
+  paused = value; needsRedraw=true;accumulator = 0; sim.suspend();clearInput(); $('overlay').hidden = !paused; $('pause').textContent = paused ? 'Resume' : 'Pause';
   $('overlay-caption').textContent = 'Take a breath.'; $('overlay-title').textContent = 'Paused'; $('resume').textContent = 'Keep driving';
 }
 function tune() {
@@ -49,7 +52,7 @@ document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click
   document.querySelectorAll('[data-drive]').forEach(option => { const selected = option.dataset.drive === drive; option.classList.toggle('selected', selected); option.setAttribute('aria-pressed', selected); });
 }));
 $('pause').addEventListener('click', () => pause()); $('reset').addEventListener('click', reset); $('resume').addEventListener('click', () => finished ? reset() : pause(false));
-$('xray').addEventListener('click', () => { xray = !xray; $('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Hide chassis' : 'Show chassis'; });
+$('xray').addEventListener('click', () => { xray = !xray; needsRedraw=true;$('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Hide chassis' : 'Show chassis'; });
 window.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement && !['KeyA','KeyD','Space','KeyR','KeyP'].includes(e.code)) return;
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
@@ -64,7 +67,7 @@ document.querySelectorAll('[data-control]').forEach(b => {
   const release = () => { touches.delete(b.dataset.control); b.classList.remove('held'); };
   b.addEventListener('pointerup', release); b.addEventListener('pointercancel', release); b.addEventListener('lostpointercapture', release);
 });
-function resize() { const r = canvas.getBoundingClientRect(); width = r.width; height = r.height; const dpr = Math.min(devicePixelRatio || 1, 2); canvas.width = width * dpr; canvas.height = height * dpr; ctx.setTransform(dpr,0,0,dpr,0,0); scale = Math.max(36, Math.min(69, width / 16)); }
+function resize() { const r = canvas.getBoundingClientRect(); width = r.width; height = r.height; const dpr = Math.min(devicePixelRatio || 1, 2); canvas.width = width * dpr; canvas.height = height * dpr; ctx.setTransform(dpr,0,0,dpr,0,0); smokeCanvas.width=Math.ceil(width*SMOKE_RESOLUTION);smokeCanvas.height=Math.ceil(height*SMOKE_RESOLUTION);smokeCtx.setTransform(SMOKE_RESOLUTION,0,0,SMOKE_RESOLUTION,0,0); scale = Math.max(36, Math.min(69, width / 16));needsRedraw=true; }
 new ResizeObserver(resize).observe(canvas);
 const X = x => width * .34 + (x - camera.x) * scale;
 const Y = y => height * .57 - (y - camera.y) * scale;
@@ -150,6 +153,7 @@ function frame(now) {
     if(sim.error){$('notice').textContent='The simulation could not start. Reload the page to retry.';}
     requestAnimationFrame(frame);return;
   }
+  if((paused||finished)&&!needsRedraw){requestAnimationFrame(frame);return;}
   if(!paused&&!finished){
     const forward=keys.has('ArrowRight')||keys.has('ArrowUp')||keys.has('KeyD')||touches.has('forward');
     const reverse=keys.has('ArrowLeft')||keys.has('ArrowDown')||keys.has('KeyA')||touches.has('reverse');
@@ -160,9 +164,14 @@ function frame(now) {
     if(sim.body.getPosition().x>=FINISH+3){finished=true;clearInput();$('overlay').hidden=false;$('overlay-title').textContent='Trail complete!';$('overlay-caption').textContent=`260 metres, every bump earned. ${formatTime(sim.elapsed)}`;$('resume').textContent='Drive again';}
   }
   const physicsEnd=profiling?performance.now():0;
-  const pos=sim.body.getPosition();camera.x+=(pos.x-camera.x)*Math.min(1,dt*5);camera.y+=(pos.y-camera.y)*Math.min(1,dt*3);
+  const pos=sim.body.getPosition();
+  // Horizontal follow uses the same interpolated pose as every car component.
+  // A lagging camera fighting discontinuous worker poses caused lateral shake.
+  camera.x=pos.x;camera.y+=(pos.y-camera.y)*(1-Math.exp(-dt*3));
   scenery();const sceneryEnd=profiling?performance.now():0;drawExhaust();const smokeEnd=profiling?performance.now():0;car();
-  if(now>=hudAt){hudAt=now+100;
+  needsRedraw=false;
+  if(profiling)profileOutput.dataset.draws=String(++drawCount);
+  if(now>=hudAt||paused||finished){hudAt=now+100;
   const distance=Math.max(0,Math.min(FINISH,pos.x-3));$('speed').textContent=Math.round(Math.abs(sim.body.getLinearVelocity().x)*3.6);$('distance').textContent=`${Math.floor(distance)} / 260 m`;$('progress').value=finished?FINISH:distance;$('time').textContent=formatTime(sim.elapsed);
   $('pressure-live').textContent=`Rear ${sim.tires[0].pressureBar.toFixed(2)} / Front ${sim.tires[1].pressureBar.toFixed(2)} bar`;
   $('rear').value=sim.joints[0].getJointTranslation();$('front').value=sim.joints[1].getJointTranslation();
@@ -171,26 +180,31 @@ function frame(now) {
   if(profiling&&!paused){
     samples.push({gap:frameGap,physics:physicsEnd-start,scenery:sceneryEnd-physicsEnd,smoke:smokeEnd-sceneryEnd,total:performance.now()-start});
     if(samples.length>300)samples.shift();
-    if(++profileTicks%30===0){const report={frames:samples.length,particles:exhaust.particles.length,workerMs:sim.workerMs,elapsed:sim.elapsed,x:pos.x,accelerator:sim.accelerator};for(const key of ['gap','physics','scenery','smoke','total']){const values=samples.map(s=>s[key]).sort((a,b)=>a-b);report[key]={mean:values.reduce((a,b)=>a+b,0)/values.length,p95:values[Math.floor((values.length-1)*.95)]};}profileOutput.textContent=JSON.stringify(report);}
+    if(++profileTicks%30===0){const report={frames:samples.length,particles:exhaust.particles.length,workerMs:sim.workerMs,bufferMs:sim.bufferMs,renderHolds:sim.renderHolds,elapsed:sim.elapsed,x:pos.x,accelerator:sim.accelerator};for(const key of ['gap','physics','scenery','smoke','total']){const values=samples.map(s=>s[key]).sort((a,b)=>a-b);report[key]={mean:values.reduce((a,b)=>a+b,0)/values.length,p95:values[Math.floor((values.length-1)*.95)]};}profileOutput.textContent=JSON.stringify(report);}
   }
   requestAnimationFrame(frame);
 }
 function formatTime(t){return `${Math.floor(t/60)}:${(t%60).toFixed(1).padStart(4,'0')}`;}
 function drawExhaust(){
+  // Billow overdraw is bandwidth-heavy at display DPR. Accumulate soft smoke
+  // at half CSS resolution, then composite once with a full-resolution road clip.
+  smokeCtx.clearRect(0,0,smokeCanvas.width/SMOKE_RESOLUTION,smokeCanvas.height/SMOKE_RESOLUTION);
+  for(const p of exhaust.particles){
+    const life=p.age/p.life,r=(p.radius+.32*Math.sqrt(p.age)+p.age*.055)*scale;
+    const fade=Math.min(1,p.age/.08)*(1-life)**1.25;
+    const alpha=(.055+p.dark*.22)*fade/(1+p.age*.22);
+    if(alpha<.002)continue;
+    const x=X(p.x),y=Y(p.y);
+    if(x+r*p.stretch<0||x-r*p.stretch>width||y+r<0||y-r>height)continue;
+    drawSmoke(smokeCtx,p,x,y,r,alpha);
+  }
   // Clip to air so billows roll along the surface without painting into the soil.
   const left=camera.x-width*.34/scale-5,right=left+width/scale+10;
   const road=visibleGround(left,right);
   ctx.save();ctx.beginPath();ctx.moveTo(X(road[0].x),-height);
   for(const p of road)ctx.lineTo(X(p.x),Y(p.y));
   ctx.lineTo(X(road.at(-1).x),-height);ctx.closePath();ctx.clip();
-  for(const p of exhaust.particles){
-    const life=p.age/p.life,r=(p.radius+.32*Math.sqrt(p.age)+p.age*.055)*scale;
-    const fade=Math.min(1,p.age/.08)*(1-life)**1.25;
-    const alpha=(.055+p.dark*.22)*fade/(1+p.age*.22);
-    if(alpha<.002)continue;
-    if(X(p.x)+r*p.stretch<0||X(p.x)-r*p.stretch>width||Y(p.y)+r<0||Y(p.y)-r>height)continue;
-    drawSmoke(ctx,p,X(p.x),Y(p.y),r,alpha);
-  }
+  ctx.drawImage(smokeCanvas,0,0,width,height);
   ctx.restore();
 }
 reset();resize();requestAnimationFrame(frame);
