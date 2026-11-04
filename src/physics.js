@@ -8,14 +8,14 @@ export { terrainHeight } from './terrain.js';
 export const FINISH = 260;
 export const STEP = 1 / 120;
 
-export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd', pressure = 2.2, nodeCount = 32, substeps = 4 } = {}) {
-  substeps=Math.max(substeps,Math.ceil(nodeCount/32)*4);
+export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd', pressure = 2.2, nodeCount = 32, substeps = 8, heightAt = terrainHeight } = {}) {
+  substeps=Math.max(substeps,Math.ceil(nodeCount/32)*8);
   const world = new World(Vec2(0, -9.81));
   const ground = world.createBody();
   const points = [];
   for (let i = 0; i <= GROUND_COUNT; i++) {
     const x = GROUND_START + i * GROUND_STEP;
-    points.push(Vec2(x, terrainHeight(x)));
+    points.push(Vec2(x, heightAt(x)));
   }
   for (let i = 1; i < points.length; i++) {
     const edge = new Edge(points[i - 1], points[i]);
@@ -27,7 +27,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   body.createFixture(new Box(1.8, .32), { density: 180, friction: .4, filterGroupIndex: -1,filterCategoryBits:8,filterMaskBits:1 });
   body.createFixture(new Box(.85, .36, Vec2(-.25, .55), 0), { density: 50, friction: .4, filterGroupIndex: -1,filterCategoryBits:8,filterMaskBits:1 });
   // Engine forward and heavy drivetrain low in the chassis; finite pitch inertia.
-  body.setMassData({ mass: body.getMass(), center: Vec2(.2, -.22), I: body.getMass() * 2.1 });
+  body.setMassData({ mass: body.getMass(), center: Vec2(.3, -.22), I: body.getMass() * 2.1 });
   // Inner wheel tubs allow the tire to tuck behind the narrower painted lip.
   for (const x of [-1.25, 1.25]) for (let i = 0; i < 16; i++) {
     const a = i * Math.PI / 16, b = (i + 1) * Math.PI / 16;
@@ -59,7 +59,8 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   function suspensionForces() {
     joints.forEach((joint, i) => {
       const travel = joint.getJointTranslation(), speed = joint.getJointSpeed();
-      const mass = body.getMass() * (i === 0 ? .42 : .58);
+      const frontFraction=.5+body.getLocalCenter().x/2.5;
+      const mass = body.getMass() * (i === 0 ? 1-frontFraction : frontFraction);
       const omega = 2 * Math.PI * frequency;
       const stiffness = mass * omega * omega;
       const dampingForce = 2 * damping * mass * omega * speed * (speed > 0 ? .65 : 1.2);
@@ -93,7 +94,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
       });
       const h=STEP/substeps;
       for(let i=0;i<substeps;i++){
-        suspensionForces();tires.forEach(t=>t.applyPressure());world.step(h,16,8);
+        suspensionForces();tires.forEach(t=>t.applyPressure());world.step(h,8,4);
       }
       const torque = motors.reduce((sum,j)=>sum+Math.abs(j.getMotorTorque(1/h)),0);
       engineLoad += ((brake || !throttle ? 0 : Math.min(1, torque / 2400)) - engineLoad) * .04;

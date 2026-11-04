@@ -38,13 +38,13 @@ test('car accelerates from a stop on the hill with every suspension preset',()=>
   }
 });
 test('each drive mode can start on a hill and switches the powered axle',()=>{
-  for(const mode of ['fwd','rwd','awd']) {
-    const s=createSimulation({drive:mode});
+  for(const mode of ['fwd','rwd','awd']) for(const pressure of [.6,2.2,3.2]) {
+    const s=createSimulation({drive:mode,pressure});
     for(let i=0;i<60/STEP && s.body.getPosition().x<123;i++)s.step(1);
     assert.ok(s.body.getPosition().x>=123,`${mode} reaches the hill`);
     run(s,3,0,true); const start=s.body.getPosition().x;
     run(s,3,1);
-    assert.ok(s.body.getPosition().x>start+2,`${mode} climbs from a stop`);
+    assert.ok(s.body.getPosition().x>start+2,`${mode}/${pressure} climbs from a stop`);
     if(mode==='fwd')assert.ok(s.motors[1].getMaxMotorTorque()>s.motors[0].getMaxMotorTorque());
     if(mode==='rwd')assert.ok(s.motors[0].getMaxMotorTorque()>s.motors[1].getMaxMotorTorque());
     if(mode==='awd')assert.equal(s.motors[0].getMaxMotorTorque(),s.motors[1].getMaxMotorTorque());

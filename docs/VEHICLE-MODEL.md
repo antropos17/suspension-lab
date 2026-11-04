@@ -1,5 +1,21 @@
 # Vehicle model revision
 
+## Tire stability correction — 2026-11-04
+
+The production solver now uses eight 960 Hz substeps with 8 velocity / 4 position iterations instead of four 480 Hz substeps with 16 / 8 iterations. The velocity-iteration budget per game tick remains 64; the smaller step resolves the stiff belt and pressure dynamics more accurately. Rings above 32 nodes use at least 16 substeps. `heightAt` is an optional deterministic simulation fixture for flat-road verification; gameplay still uses the existing trail profile.
+
+The renderer now fills the polygon through contact-body centers plus the actual contact circles. The former polygon through averaged outer normals could bridge through terrain vertices by 1–2 mm even when all physical bodies remained clear. The corrected fill follows the existing collision representation, without projecting the shape onto terrain or changing material softness.
+
+Baseline rough-road probes found up to 6.2 mm vertical tread penetration at 3.2 bar. With the corrected solver, all three high-pressure drive probes crossed 95 m with no measured vertical penetration; a front-drive normal-distance probe retained at least 4.2 mm clearance to the actual terrain segments. Flat-road body vertical acceleration RMS changed from 0.0987 / 0.1649 / 0.2739 to 0.0505 / 0.0889 / 0.1067 m/s^2 at 0.6 / 2.2 / 3.2 bar. These are paired gameplay measurements, not real-vehicle calibration. Increasing contact bead radius and adding a bulk damping trial did not provide enough benefit and were reverted.
+
+New behavioral regressions cover sub-0.1 mm settled hub ripple, a ramped load/unload with sub-1 mm solver-step jumps and ride-height recovery, flat-road judder bounds, and all nine drive/pressure combinations over the rough section. They check both vertical clearance and independent Euclidean clearance to nearby terrain segments, physical chamber area, and the rendered center-polygon bridges. An initial stability test accidentally changed step size immediately before measuring settled ripple; it was corrected to settle and measure at one constant step, retaining its tolerance.
+
+Browser whole-course checks: FWD at 3.2 bar finished in 30.6 simulated seconds, RWD at 0.6 bar in 29.9, and AWD at 2.2 bar in 29.0. No captured JavaScript errors. These representative browser runs supplement the deterministic regressions; arbitrary terrains, impacts and hardware are not qualified.
+
+The implementation description below records the preceding integration. Its four-substep references are superseded by this section.
+
+An additional extreme-pressure hill audit found FWD at 3.2 bar gained only 1.961 m in the first three seconds after stopping. Reducing the low-speed slip target alone only raised that to 1.990 m, so that trial was reverted. The front-engine chassis center of mass was moved from x=0.20 to x=0.30 m; supported axle fractions are now derived from its actual local center and the 2.5 m wheelbase, rather than remaining hardcoded. The nominal front/rear split is 62/38. This is a game tuning choice, not measured vehicle mass data. FWD restart gains became 2.992 m at 0.6 bar and 2.691 m at 3.2 bar; RWD and AWD extreme-pressure cases also passed. The existing hill regression now covers all nine drive/pressure combinations with the unchanged >2 m criterion. The final FWD/3.2 bar browser run finished in 30.2 simulated seconds, without captured JS errors.
+
 ## Current pneumatic integration — 2026-11-04
 
 This section supersedes earlier rigid-tire descriptions below. `src/pneumatic-tire.js` now supplies the game's tire contact geometry: 32 independent circular tread elements on an elastic belt, radial/offset sidewall links and a rotating rigid rim. There is no rigid outer tire circle and no renderer-only ground projection. The small 0.245 m rim circle exists for bottoming; normal rolling contact is carried by the tread bodies. The old `src/wheel-shape.js` was removed.

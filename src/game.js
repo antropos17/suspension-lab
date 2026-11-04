@@ -110,7 +110,7 @@ function car() {
   sim.wheels.forEach((w,i)=>{
     const hub=w.getPosition(),r=TIRE_RADIUS*scale,tire=sim.tires[i],outline=tire.getOutline();
     // The rendered surface comes directly from the moving collision bodies.
-    polygon(outline.map(p=>[X(p.x),Y(p.y)]),'#202426');
+    polygon(tire.nodes.map(n=>{const p=n.getPosition();return [X(p.x),Y(p.y)];}),'#202426');
     for(const node of tire.nodes){const p=node.getPosition();circle(X(p.x),Y(p.y),tire.skin*scale,'#202426');}
     polygon(outline.map(p=>[X(hub.x+(p.x-hub.x)*.78),Y(hub.y+(p.y-hub.y)*.78)]),'#303936');
     outline.forEach((p,j)=>{

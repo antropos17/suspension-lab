@@ -18,7 +18,7 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 
 ## Physics
 
-Planck provides rigid contacts and joints. Each pneumatic tire now has 32 independent tread contact bodies, elastic belt/sidewall links and an isothermal pressure-volume model around a rigid rim. Pressure changes actual geometry and hub support; the renderer follows those contact bodies. Drive and brake torque pass through the rim and carcass into road contacts. Gravity is 9.81 m/s²; physics advances at 120 Hz with four 480 Hz solver substeps for the default ring. This is a physically deformable 2D prototype, not calibrated rubber FEA or a validated full vehicle model. It does not model temperature, punctures, lateral tire deformation or 3D weight transfer.
+Planck provides rigid contacts and joints. Each pneumatic tire now has 32 independent tread contact bodies, elastic belt/sidewall links and an isothermal pressure-volume model around a rigid rim. Pressure changes actual geometry and hub support; the renderer follows those contact bodies. Drive and brake torque pass through the rim and carcass into road contacts. Gravity is 9.81 m/s²; physics advances at 120 Hz with eight 960 Hz solver substeps for the default ring. This is a physically deformable 2D prototype, not calibrated rubber FEA or a validated full vehicle model. It does not model temperature, punctures, lateral tire deformation or 3D weight transfer.
 
 Reference: https://piqnt.dev/planck.js/docs/joint/distance-joint.html (spring frequency and damping concepts).
 
