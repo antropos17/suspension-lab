@@ -11,6 +11,7 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 - S rolls three reels. Three equal symbols across the top, middle or bottom row or either diagonal win. One part line fits one level immediately. A coin line gives 30 coins; a diamond line gives three diamonds. A miss still supplies driving time. Hold a stopped column for the next spin, or start another roll while coasting under slot throttle.
 - The shop takes orders against future winning lines: coins double the next matching part upgrade, and a gem kit installs on the next line of its associated part. New and migrated garages carry eight part levels. Distance is a driving record only.
 - Hold N or the N₂O pedal for boost. Driving with nitro released refills a complete tank over 60 metres. Brake and reverse take priority. A fresh car starts with broken windows, corroded steel rims and heavy exhaust smoke. Bodywork advances through restored enamel, a ducktail, wider arches and competition wings.
+- Open the Admin panel from the header to enter a separate per-tab test garage. New game resets that garage and its distance record. Fit grade 4, all grade-8 parts and kits, add test currency, or choose a symbol and payline for a deterministic spin. Return to Career restores the regular save.
 - Touch controls are available on screen.
 - Reach the finish along the 800 m trail. Restart if you roll over.
 - Spring stiffness and shock damping affect the simulation immediately. Show chassis reveals the suspension.

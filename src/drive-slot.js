@@ -10,6 +10,18 @@ const STRIPS=[
   [1,3,2,0,1,2,3,0,2,1,0,3],
   [3,0,2,1,0,1,3,2,0,3,1,2]
 ];
+export const LINE_NAMES=['Верхний ряд','Средний ряд','Нижний ряд','Диагональ ↘','Диагональ ↗'];
+
+// Stops on the real strips that isolate each target line with palette index zero.
+const TEST_STOPS=[[0,3,1],[2,2,0],[1,1,2],[0,2,2],[1,2,1]];
+export function testLineBoard(symbol,line) {
+  return Array.from({length:9},(_,cell)=>{
+    const column=cell%3, row=Math.floor(cell/3);
+    const strip=STRIPS[column], stop=TEST_STOPS[line][column];
+    return (symbol+strip[(stop+row)%strip.length])%SYMBOLS.length;
+  });
+}
+
 export function scoreParts(parts) {
   const lines=LINES.filter(line=>line.every(i=>parts[i]===parts[line[0]]));
   const matches=PART_NAMES.map(()=>0);
@@ -20,8 +32,7 @@ export function scoreParts(parts) {
     else if(id===9) gems+=3;
     else matches[id]++;
   }
-  const names=['Верхний ряд','Средний ряд','Нижний ряд','Диагональ ↘','Диагональ ↗'];
-  const name=lines.length ? lines.map(line=>names[LINES.indexOf(line)]).join(' + ') : 'Без линии';
+  const name=lines.length ? lines.map(line=>LINE_NAMES[LINES.indexOf(line)]).join(' + ') : 'Без линии';
   return {matches,lines,coins,gems,name,seconds:3.5+Math.min(3,lines.length)*1.5};
 }
 export function createDriveSlot(random = Math.random) {
@@ -30,18 +41,21 @@ export function createDriveSlot(random = Math.random) {
       slot.phase='ready';slot.parts=[0,1,2,3,4,5,6,7,8];slot.previous=slot.parts;
       slot.result=null;slot.hasResult=false;slot.held=slot.locked=-1;slot.started=slot.ends=slot.autoUntil=0;
     },
-    spin(now){
+    spin(now,board){
       if(slot.phase==='rolling')return false;
-      slot.previous=slot.parts;slot.locked=slot.held;slot.held=-1;
-      const pool=SYMBOLS.map((_,i)=>i), palette=[];
-      if(slot.locked>=0) palette.push(pool.splice(pool.indexOf(slot.previous[3+slot.locked]),1)[0]);
-      while(palette.length<4) palette.push(pool.splice(Math.floor(random()*pool.length),1)[0]);
-      slot.parts=[...slot.previous];
-      STRIPS.forEach((strip,col)=>{
-        if(col===slot.locked)return;
-        const stop=Math.floor(random()*strip.length);
-        for(let row=0;row<3;row++)slot.parts[row*3+col]=palette[strip[(stop+row)%strip.length]];
-      });
+      slot.previous=slot.parts;slot.locked=board ? -1 : slot.held;slot.held=-1;
+      if(board)slot.parts=board;
+      else{
+        const pool=SYMBOLS.map((_,i)=>i), palette=[];
+        if(slot.locked>=0) palette.push(pool.splice(pool.indexOf(slot.previous[3+slot.locked]),1)[0]);
+        while(palette.length<4) palette.push(pool.splice(Math.floor(random()*pool.length),1)[0]);
+        slot.parts=[...slot.previous];
+        STRIPS.forEach((strip,col)=>{
+          if(col===slot.locked)return;
+          const stop=Math.floor(random()*strip.length);
+          for(let row=0;row<3;row++)slot.parts[row*3+col]=palette[strip[(stop+row)%strip.length]];
+        });
+      }
       slot.result=scoreParts(slot.parts);slot.started=now;
       slot.ends=now+reelStopTime(2)+slot.result.seconds;
       slot.phase='rolling';slot.manual=false;return true;

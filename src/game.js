@@ -5,12 +5,13 @@ import { groundHeight } from './terrain.js';
 import { drawClassicBody, drawWheelWells } from './car-art.js';
 import { createBakuBackdrop } from './baku-background.js';
 import { createSmokeRenderer } from './smoke-renderer.js';
-import { createDriveSlot } from './drive-slot.js';
+import { createDriveSlot, LINE_NAMES, testLineBoard } from './drive-slot.js';
 import { createSlotPanel } from './slot-panel.js';
-import { readGarage, advanceGarage, levelOf, PART_NAMES, SPECIALS, purchase, buildSpec } from './garage.js';
+import { readGarage, advanceGarage, levelOf, THRESHOLDS, SYMBOLS, PART_NAMES, SPECIALS, purchase, buildSpec } from './garage.js';
 import { createGaragePanel } from './garage-panel.js';
 import { drawRim } from './part-art.js';
 import { createShop } from './shop.js';
+import { createGarageProfile } from './garage-profile.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
 const smokeCanvas=document.createElement('canvas'),smokeCtx=smokeCanvas.getContext('2d');
@@ -28,35 +29,19 @@ let width = 1000, height = 500, scale = 64, hudAt=0, needsRedraw=true;
 const keys = new Set(), touches = new Set();
 const slot = createDriveSlot();
 const drawSlot = createSlotPanel(slot, $('slot-bank'), $('spin'), $('slot-status'), $('slot-time'),()=>levels);
-const oldKey='suspension-lab.garage.v1', saveKey='suspension-lab.garage.v3';
+const testMode=new URLSearchParams(location.search).get('garage')==='test';
+const profile=createGarageProfile(testMode);
 let storageAvailable=true;
-function loadGarage(fallback) {
-  if(storageAvailable){
-    try { return readGarage(localStorage.getItem(saveKey) ?? localStorage.getItem('suspension-lab.garage.v2') ?? localStorage.getItem(oldKey)); }
-    catch { storageAvailable=false; }
-  }
-  return fallback ?? readGarage(null);
-}
-let garage=loadGarage(), levels=garage.points.map(levelOf), spec=buildSpec(levels,garage.kits);
+let garage=profile.load(), levels=garage.points.map(levelOf), spec=buildSpec(levels,garage.kits);
 let fitHighlights = [], fittedAt = 0;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const drawGarage = createGaragePanel($('rack-left'), $('rack-right'), $('build-level'));
 const drawShop=createShop($('shop-items'),$('wallet'),buyItem);
 drawGarage(garage);drawShop(garage);
 let routePeak = garage.best, queuedPeak = garage.best, telemetryTime = 0, telemetrySpeed = 0;
-const peakKey = oldKey+'.distance';
-try {
-  const latest = Number(localStorage.getItem(peakKey));
-  if(Number.isInteger(latest) && latest<=FINISH) routePeak=Math.max(routePeak,latest);
-} catch {}
+routePeak=Math.max(routePeak,profile.peak());
 $('best').textContent='Рекорд '+routePeak+' м';
-function flushDistance() {
-  // An unloading document cannot wait for a Web Lock. Store its last metre
-  // separately so this final write can never overwrite a parts transaction.
-  try {
-    if(routePeak > (Number(localStorage.getItem(peakKey)) || 0)) localStorage.setItem(peakKey,String(routePeak));
-  } catch {}
-}
+function flushDistance() { profile.savePeak(routePeak); }
 function refreshBuild(changes,reels) {
   levels=garage.points.map(levelOf);spec=buildSpec(levels,garage.kits);
   sim?.setBuild(levels,garage.kits);
@@ -67,11 +52,11 @@ function refreshBuild(changes,reels) {
 }
 function transact(change) {
   const apply=()=>{
-    garage=loadGarage(garage);
+    if(storageAvailable)garage=profile.load(garage);
     change();
-    if(storageAvailable) try { localStorage.setItem(saveKey,JSON.stringify(garage)); } catch { storageAvailable=false; }
+    if(storageAvailable) try { profile.save(garage); } catch { storageAvailable=false; }
   };
-  return navigator.locks ? navigator.locks.request(saveKey,apply) : apply();
+  return !testMode && navigator.locks ? navigator.locks.request(profile.key,apply) : apply();
 }
 function buyItem(kind,index,expected) {
   return transact(()=>{
@@ -92,14 +77,16 @@ function recordProgress(reward, meters) {
   });
 }
 window.addEventListener('storage',e=>{
-  if(e.key!==saveKey) return;
-  garage=loadGarage(garage);routePeak=Math.max(routePeak,garage.best);refreshBuild();
+  if(testMode || e.key!==profile.key) return;
+  if(storageAvailable)garage=profile.load(garage);
+  routePeak=Math.max(routePeak,garage.best);refreshBuild();
 });
 window.addEventListener('pagehide', flushDistance);
-function spin() {
-  if (sim.ready && !paused && !finished && slot.spin(sim.elapsed)) drawSlot(sim.elapsed, false);
+function spin(board) {
+  if(!sim.ready || paused || finished || !slot.spin(sim.elapsed,board))return false;
+  drawSlot(sim.elapsed,false);return true;
 }
-$('spin').addEventListener('click', spin);
+$('spin').addEventListener('click',()=>spin());
 let exhaust = createExhaust(), smokeTime=0;
 const presets = { comfort: [1.3, .4], trail: [1.7, .5], sport: [2.6, .65] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
@@ -139,7 +126,53 @@ document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click
 }));
 $('pause').addEventListener('click', () => pause()); $('reset').addEventListener('click', reset); $('resume').addEventListener('click', () => finished ? reset() : pause(false));
 $('xray').addEventListener('click', () => { xray = !xray; needsRedraw=true;$('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Скрыть шасси' : 'Показать шасси'; });
+const admin=$('admin');
+$('admin-link').addEventListener('click',()=>{admin.open=true;});
+if(location.hash==='#admin')admin.open=true;
+const profileUrl=new URL(location.href);
+if(testMode)profileUrl.searchParams.delete('garage');else profileUrl.searchParams.set('garage','test');
+profileUrl.hash=testMode?'':'admin';
+$('profile-link').href=profileUrl.href;
+if(testMode){
+  document.body.classList.add('test-mode');
+  $('admin-link').textContent='Тестовый гараж';
+  $('profile-link').textContent='Вернуться в карьеру';
+  $('admin-help').textContent='Отдельное сохранение на время этой вкладки.';
+  $('test-tools').hidden=false;
+  const status=$('admin-status');
+  $('test-new').addEventListener('click',()=>{
+    transact(()=>{garage=readGarage(null);});
+    profile.clearTestPeak();routePeak=queuedPeak=0;
+    $('best').textContent='Рекорд 0 м';$('shop-notice').textContent='';
+    refreshBuild();reset();status.textContent='Новая тестовая игра. Все узлы первого уровня.';
+  });
+  function fitPreset(level){
+    transact(()=>{
+      garage.points.fill(THRESHOLDS[level-1]);
+      garage.kits.fill(level===THRESHOLDS.length);
+      garage.orders.fill(false);garage.kitOrders.fill(false);
+      refreshBuild();
+    });
+    $('shop-notice').textContent='';
+    status.textContent=level===THRESHOLDS.length?'Установлены все детали и три спецкомплекта.':'Все детали четвёртого уровня.';
+  }
+  $('test-restored').addEventListener('click',()=>fitPreset(4));
+  $('test-max').addEventListener('click',()=>fitPreset(THRESHOLDS.length));
+  $('test-wallet').addEventListener('click',()=>{
+    transact(()=>{garage.coins+=300;garage.gems+=10;drawShop(garage);});
+    status.textContent='Начислено 300 монет и 10 алмазов.';
+  });
+  SYMBOLS.forEach((label,i)=>$('test-symbol').add(new Option(label,i)));
+  LINE_NAMES.forEach((label,i)=>$('test-line').add(new Option(label,i)));
+  $('test-line').value='1';
+  $('test-roll').addEventListener('click',()=>{
+    const symbol=Number($('test-symbol').value), line=Number($('test-line').value);
+    if(spin(testLineBoard(symbol,line)))status.textContent=LINE_NAMES[line]+' · '+SYMBOLS[symbol];
+    else status.textContent=finished?'Начни новый заезд для прокрутки.':paused?'Сними паузу для прокрутки.':'Дождись готовности барабанов.';
+  });
+}
 window.addEventListener('keydown', e => {
+  if(e.target instanceof HTMLSelectElement || (e.code==='Space' && e.target.closest?.('#admin, #admin-link')))return;
   if (e.target instanceof HTMLInputElement && !['KeyA','KeyD','Space','KeyR','KeyP','KeyS','KeyN'].includes(e.code)) return;
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
   if (e.repeat) return;

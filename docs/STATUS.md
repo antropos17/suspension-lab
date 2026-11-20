@@ -137,3 +137,11 @@ The steel-blue bench uses Bahnschrift with system fallbacks, amber controls and 
 Six full-course simulations on the final road used continuous forward throttle, 2.2 bar, no nitro and no shop kits. Stock times were 79.55 s AWD, 80.13 s FWD and 79.74 s RWD. All-level-8 times were 52.03, 53.13 and 52.26 s respectively. The initial candidate upset the grade-8 RWD car near 205 m; transitioning to longer road undulations after the hill removed that rollover. The final-road liner, suspension and height-interpolation regressions passed. The free-wheel skill bench was also run separately as a historical fixture; the integrated pneumatic tire tests cover the actual driving model.
 
 Verification: npm test passed 36/36 in 455.48 s. After the last change to the road beyond 162 m, all three affected integration regressions and the six 800 m runs passed. Lint, build and diff checks passed; the served HTML, CSS and both JavaScript bundles matched dist byte-for-byte.
+
+## 2026-11-21 · In-game test garage
+
+The header opens a test panel. Its garage uses session storage scoped to the current tab. Career saves, migration, currency and distance keys remain separate. New game resets the test garage, pending orders, record and race. The grade-4 preset and maximum preset fit the live worker in place; the maximum preset installs all eight grade-8 components and three kits. Adding test funds credits 300 coins and ten diamonds. The symbol and line selectors choose actual three-stop reel windows and settle exactly once through the regular drive-slot and reward pipeline.
+
+Browser checks covered fresh garage, grade 4 (32/64), maximum (64/64), test wallet, reload, new game and a suspension upgrade along the rising diagonal. Returning to Career restored the observed 33/64 build, 14 coins, three diamonds and 439 m record. Regression tests cover all 50 symbol/line pairs, the held-column interaction, reset, legacy career reads and save isolation. Browser checks were performed on desktop.
+
+Verification passed all 38 tests in 455.90 s. Lint, production build and whitespace checks passed. The served HTML, CSS and game bundle matched the checked files byte-for-byte.

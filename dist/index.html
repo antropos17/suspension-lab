@@ -7,7 +7,7 @@
 </head>
 <body>
   <main>
-    <header><div class="brand"><div><h1>Бакинский гараж</h1><p>Прибрежная трасса · 800 м</p></div></div><div class="header-actions"><button id="pause" aria-keyshortcuts="P">Пауза <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Новый заезд <kbd>R</kbd></button></div></header>
+    <header><div class="brand"><div><h1>Бакинский гараж</h1><p>Прибрежная трасса · 800 м</p></div></div><div class="header-actions"><a id="admin-link" href="#admin">Админ-панель</a><button id="pause" aria-keyshortcuts="P">Пауза <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Новый заезд <kbd>R</kbd></button></div></header>
     <section class="stage" aria-label="Заезд по Баку">
       <canvas id="game" aria-label="Седан на прибрежной трассе в Баку. D — газ, A — задний ход, пробел — тормоз."></canvas>
       <div class="hud"><div><strong id="speed">0</strong><span>км/ч</span></div><div class="route"><span id="distance">0 / 800 м</span><progress id="progress" max="800" value="0" aria-label="Пройденная дистанция"></progress><span id="acceleration">0.0 м/с²</span></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
@@ -42,6 +42,25 @@
       <div class="tuning"><label for="spring">Жёсткость пружин <output id="spring-value">1.7 Hz</output></label><input id="spring" type="range" min="1.1" max="4" value="1.7" step="0.1"><div class="range-labels"><span>Мягче</span><span>Жёстче</span></div><label for="damping">Демпфирование <output id="damping-value">0.50</output></label><input id="damping" type="range" min="0.1" max="1.2" value="0.50" step="0.05"><div class="range-labels"><span>Свободнее</span><span>Плотнее</span></div><label for="pressure">Давление шин <output id="pressure-value">2.2 bar</output></label><input id="pressure" type="range" min="0.6" max="3.2" value="2.2" step="0.1"><div class="range-labels"><span>Холодная шина</span><span>Жёстче</span></div><small id="pressure-live">Rear 2.20 / Front 2.20 bar</small></div>
       <div class="setup"><span>Привод</span><div class="drive-options" role="group" aria-label="Drive type"><button data-drive="fwd" aria-pressed="false">Передний</button><button data-drive="rwd" aria-pressed="false">Задний</button><button data-drive="awd" class="selected" aria-pressed="true">Полный</button></div><span>Настройки</span><div class="presets"><button data-preset="comfort">Комфорт</button><button data-preset="trail" class="selected">Трасса</button><button data-preset="sport">Спорт</button></div><div class="suspension-readout"><span>Rear <meter id="rear" min="-0.6" max="0.6" value="0" aria-label="Rear suspension travel"></meter></span><span>Front <meter id="front" min="-0.6" max="0.6" value="0" aria-label="Front suspension travel"></meter></span></div></div>
     </section>
+    </details>
+    <details id="admin" class="admin-panel">
+      <summary>Админ-панель</summary>
+      <p id="admin-help">Проверяй сборки и комбинации в отдельном тестовом гараже.</p>
+      <a id="profile-link" href="?garage=test#admin">Открыть тестовый гараж</a>
+      <div id="test-tools" hidden>
+        <div class="admin-actions">
+          <button type="button" id="test-new">Новая игра</button>
+          <button type="button" id="test-restored">После ремонта · ур. 4</button>
+          <button type="button" id="test-max">Максимальный тюнинг</button>
+          <button type="button" id="test-wallet">+300 монет и 10 алмазов</button>
+        </div>
+        <div class="admin-actions">
+          <label>Символ <select id="test-symbol"></select></label>
+          <label>Выигрышная линия <select id="test-line"></select></label>
+          <button type="button" id="test-roll">Проверить комбинацию</button>
+        </div>
+        <output id="admin-status" role="status"></output>
+      </div>
     </details>
     <footer><span><kbd>S</kbd> Прокрутка <i></i><kbd>A</kbd> Назад <i></i><kbd>D</kbd> Газ <i></i><kbd>N</kbd> Нитро <i></i><kbd>Space</kbd> Тормоз <i></i><kbd>R</kbd> Новый заезд</span></footer>
   </main>
