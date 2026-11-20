@@ -1,7 +1,9 @@
 import { PART_NAMES, THRESHOLDS, levelOf, buildSpec } from './garage.js';
 import { TIRE_RADIUS } from './vehicle-constants.js';
 
-const finishes = ['Ржавчина', 'Грунт', 'Эмаль', 'Два тона', 'Спойлер'];
+import { paintIcon } from './part-art.js';
+
+const finishes = ['Ржавчина', 'Грунт', 'Эмаль', 'Два тона', 'Утиный хвост', 'Спорт', 'Двойное крыло', 'Гоночный обвес'];
 
 export function createGaragePanel(left, right, title) {
   const cards = PART_NAMES.map((name,i) => {
@@ -11,18 +13,20 @@ export function createGaragePanel(left, right, title) {
     card.querySelector('i').dataset.part = i;
     card.querySelector('b').textContent = name;
     card.querySelector('progress').setAttribute('aria-label', name);
-    (i < 3 ? left : right).append(card);
+    (i < 4 ? left : right).append(card);
     return card;
   });
   return function draw(garage, changes, reels) {
     const levels = garage.points.map(levelOf);
-    const spec = buildSpec(levels);
-    const specs = [spec.torque+' Н·м', 'до '+(spec.wheelSpeed*TIRE_RADIUS*3.6).toFixed(0)+' км/ч',
+    const spec = buildSpec(levels,garage.kits);
+    const specs = [Math.round(spec.torque)+' Н·м', 'до '+(spec.wheelSpeed*TIRE_RADIUS*3.6).toFixed(0)+' км/ч',
       'μ '+spec.friction.toFixed(2), (spec.damperLimit/1000).toFixed(2)+' кН',
-      spec.brakeTorque+' Н·м', finishes[levels[5]-1]];
-    title.textContent = 'Сборка ' + levels.reduce((a,b)=>a+b,0) + ' / 30';
+      spec.brakeTorque+' Н·м', finishes[levels[5]-1],
+      spec.smokeFactor.toFixed(2)+'× копоть', spec.boostDuration.toFixed(1)+' с форсажа'];
+    title.textContent = 'Сборка ' + levels.reduce((a,b)=>a+b,0) + ' / 64';
     cards.forEach((card,i) => {
       const lv = levels[i], next = THRESHOLDS[lv], points = garage.points[i];
+      paintIcon(card.querySelector('i'),i,lv);
       card.querySelector('strong').textContent = 'Ур. '+lv;
       card.querySelector('small').textContent = specs[i] + ' · ' + (next ? points+'/'+next : 'макс.');
       const bar = card.querySelector('progress');
@@ -43,7 +47,7 @@ export function createGaragePanel(left, right, title) {
       const start = source.getBoundingClientRect(), end = card.querySelector('i').getBoundingClientRect();
       const chip = document.createElement('i');
       chip.className = 'part-icon fit-chip';
-      chip.dataset.part = i;
+      paintIcon(chip,i,to);
       chip.style.left = start.left+start.width/2-18+'px';
       chip.style.top = start.top+start.height/2-18+'px';
       document.body.append(chip);

@@ -32,6 +32,11 @@ test('worker runs the unchanged solver and preserves every contact-node position
   direct.setBuild(upgraded); direct.step(1);
   reply=await request({type:'step',generation:1,settings:{...config,drive:'rwd',pressure:.6,frequency:1.3,damping:.4,levels:upgraded},steps:1,throttle:1,brake:false});
   assert.deepEqual(reply.state,snapshot(direct),'the live build reaches the worker without resetting the car');
+  const levels=Array(8).fill(8), kits=[true,true,true];
+  direct.setBuild(levels,kits);direct.step(1,false,true);
+  reply=await request({type:'step',generation:1,settings:{...config,drive:'rwd',pressure:.6,frequency:1.3,damping:.4,levels,kits},steps:1,throttle:1,nitro:true});
+  assert.deepEqual(reply.state,snapshot(direct),'nitro, maximum levels and kits hot-fit through the worker');
+  assert.ok(reply.state.boosting && reply.state.nitroCharge<1);
  }finally{await worker.terminate();}
 });
 

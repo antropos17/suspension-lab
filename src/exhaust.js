@@ -8,12 +8,13 @@ export function createExhaust(random = Math.random) {
     particles,
     get soot() { return soot; },
     setIntensity(value) { intensity = Math.max(0, Math.min(6, Number(value) || 0)); },
-    step(sim, dt) {
+    step(sim, dt, smokeFactor=1) {
       time += dt;
       const gas = sim.accelerator, load = sim.engineLoad;
       transient = Math.min(1, transient * Math.exp(-dt * 3) + Math.max(0, gas - previousGas) * 1.8);
       previousGas = gas;
-      const darkness = Math.min(1, intensity * (.025 + gas * .16 + load * gas * .45 + transient * .8));
+      const wear=Math.max(0,smokeFactor-1);
+      const darkness = Math.min(1, intensity * smokeFactor * (.025 + .12*wear + gas * .16 + load * gas * .45 + transient * .8));
       soot = Math.min(1, soot + darkness * dt * .06);
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i]; p.age += dt;
@@ -31,7 +32,7 @@ export function createExhaust(random = Math.random) {
         if (p.y < floor) { p.y = floor; p.vy = Math.abs(p.vy) * .2 + .08; }
       }
       const pulse = .8 + .2 * Math.sin(time * (16 + gas * 19));
-      carry += dt * intensity * (3 + gas * 16 + transient * 12) * pulse;
+      carry += dt * intensity * smokeFactor * (3 + 2*wear + gas * 16 + transient * 12) * pulse;
       while (carry >= 1) {
         carry--;
         // Saturation retires old puffs, never blocks fresh exhaust at the pipe.

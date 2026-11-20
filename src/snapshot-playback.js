@@ -4,7 +4,8 @@
 const mix=(a,b,t)=>a+(b-a)*t;
 function point(out,a,b,t){out.x=mix(a.x,b.x,t);out.y=mix(a.y,b.y,t);}
 function blend(out,a,b,t){
-  for(const key of ['elapsed','engineLoad','accelerator'])out[key]=mix(a[key],b[key],t);
+  for(const key of ['elapsed','engineLoad','accelerator','nitroCharge'])out[key]=mix(a[key],b[key],t);
+  out.boosting=t<.5?a.boosting:b.boosting;
   point(out.body.position,a.body.position,b.body.position,t);
   point(out.body.velocity,a.body.velocity,b.body.velocity,t);
   out.body.angle=mix(a.body.angle,b.body.angle,t);

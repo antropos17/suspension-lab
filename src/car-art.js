@@ -53,13 +53,17 @@ function rustLayers() {
   return corrosion;
 }
 
-export function drawClassicBody(c, xray, soot, bodyLevel) {
+export function drawClassicBody(c, xray, soot, levels, kits) {
+  const bodyLevel=levels[5];
   const line=(p,color,w)=>{c.beginPath();p.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.strokeStyle=color;c.lineWidth=w;c.lineJoin='round';c.stroke();};
   const poly=(p,color,stroke,w=.018)=>{c.beginPath();p.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=color;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=w;c.stroke();}};
   const dot=(x,y,r,color)=>{c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=color;c.fill();};
   const rect=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
   const paint=c.createLinearGradient(0,-.4,0,1.1);
   const colors = bodyLevel < 3 ? ['#484638','#7b7968','#a29b83','#b6b09b','#827e6a'] :
+    bodyLevel >= 8 ? ['#132334','#203042','#244661','#3b6977','#bd985e'] :
+    bodyLevel === 7 ? ['#312733','#4a364c','#68465d','#a17474','#523c54'] :
+    bodyLevel === 6 ? ['#353c40','#526269','#75888a','#b5c4bc','#69797a'] :
     bodyLevel >= 4 ? ['#173c3f','#265a5c','#36797a','#66a3a0','#326768'] :
     ['#38252b','#6e2730','#993e44','#c16b69','#783239'];
   [0,.25,.55,.7,1].forEach((stop,i)=>paint.addColorStop(stop,colors[i]));
@@ -92,6 +96,20 @@ export function drawClassicBody(c, xray, soot, bodyLevel) {
     c.beginPath();c.ellipse(.58,.63,.105,.028,-.8,0,Math.PI*2);c.strokeStyle='#263136';c.lineWidth=.018;c.stroke();
     poly([[-1.1,.61],[-.66,1.03],[-.4,1.03],[-.83,.61]],'#ffffff16');
     poly([[-.06,.48],[.45,1.04],[.58,1.04],[.06,.48]],'#d0e4e323');
+    if(bodyLevel<=2){
+      const cracks=bodyLevel===1 ? [[-.61,.72],[.29,.79]] : [[-.61,.72]];
+      for(const [x,y] of cracks){
+        for(const [dx,dy] of [[-.25,.24],[.1,.23],[.24,-.1],[-.1,-.27],[-.23,-.04]]){
+          line([[x,y],[x+dx*.42+.02,y+dy*.42],[x+dx*.69,y+dy*.7+.016],[x+dx,y+dy]],'#deede2b5',.012);
+        }
+        poly([[x,y],[x+.07,y+.14],[x+.14,y+.085],[x+.1,y-.04]],'#273034');
+      }
+    }
+    if(levels[7]>=3){
+      rect(-.94,.49,.22,.13,'#376399');dot(-.72,.55,.064,'#4377a3');
+      rect(-.87,.49,.035,.13,'#b0b9aa');
+      if(kits[1]) rect(-.94,.64,.22,.075,'#538bbc');
+    }
     c.restore();
     line([window[0],window[window.length-1]],'#dde0d4',.022);
   }
@@ -131,6 +149,14 @@ export function drawClassicBody(c, xray, soot, bodyLevel) {
     c.beginPath();c.ellipse(x,ARCH_Y,ARCH_X+.038,ARCH_Y_RADIUS+.038,0,archAngle,Math.PI-archAngle);
     c.strokeStyle='#522d34';c.lineWidth=.012;c.stroke();
   }
+  if(bodyLevel>=6){
+    poly([[-1.99,.14],[-1.48,.27],[1.98,.27],[1.98,.23],[-1.46,.22],[-1.96,.085]],bodyLevel===8?'#e9b851':'#dbc9a9');
+    for(const x of [-1.25,1.25]){
+      c.beginPath();c.ellipse(x,ARCH_Y,ARCH_X+.054,ARCH_Y_RADIUS+.052,0,archAngle,Math.PI-archAngle);
+      c.strokeStyle=bodyLevel>=7?'#283539':'#526264';c.lineWidth=.065;c.stroke();
+      for(let i=1;i<=7;i++){const a=i*Math.PI/8;dot(x+(ARCH_X+.054)*Math.cos(a),ARCH_Y+(ARCH_Y_RADIUS+.052)*Math.sin(a),.012,'#c6c5b2');}
+    }
+  }
   const stain=c.createRadialGradient(-2,-.21,0,-2,-.21,.27);
   stain.addColorStop(0,`rgba(15,18,19,${.15+soot*.6})`);stain.addColorStop(1,'rgba(15,18,19,0)');
   rect(-2.09,-.34,.48,.39,stain);
@@ -140,10 +166,38 @@ export function drawClassicBody(c, xray, soot, bodyLevel) {
     c.restore();
   }
   c.restore();
-  if(bodyLevel >= 5){
-    for(const x of [-2.01,-1.75])line([[x,.36],[x-.035,.62]],'#364340',.045);
-    poly([[-2.23,.60],[-1.62,.62],[-1.56,.67],[-2.24,.69]],'#284644','#b6cabb',.018);
-    poly([[-2.25,.59],[-2.16,.60],[-2.17,.72],[-2.26,.73]],'#326965','#213935',.012);
+  if(bodyLevel===5){
+    poly([[-2.12,.34],[-1.83,.38],[-1.8,.42],[-2.12,.52]],'#25433e','#a7b3a5');
+  }
+  if(bodyLevel>=6 || (kits[2] && bodyLevel>=4)){
+    const h=bodyLevel>=7?.83:.64;
+    for(const x of [-2.01,-1.75])line([[x,.36],[x-.07,h]],'#344041',.045);
+    poly([[-2.28,h],[-1.57,h+.014],[-1.52,h+.063],[-2.27,h+.09]],'#293d40','#b2bdb5',.016);
+    if(bodyLevel>=7)poly([[-2.25,h-.09],[-1.61,h-.08],[-1.57,h-.04],[-2.24,h-.02]],'#273138','#a0aaa7');
+    poly([[-2.31,h-.08],[-2.16,h-.04],[-2.17,h+.14],[-2.31,h+.12]],'#33494d','#182a2d',.014);
+  }
+  if(bodyLevel>=6 || (kits[2] && bodyLevel>=4)){
+    poly([[-.66,-.24],[.65,-.24],[.67,-.35],[-.69,-.35]],'#263537','#939c91');
+    poly([[1.93,-.17],[2.12,-.17],[2.27,-.3],[1.91,-.3]],'#293839','#8e9e91');
+  }
+  if(kits[2] && bodyLevel>=4){
+    poly([[-.69,-.23],[.64,-.23],[.69,-.33],[-.71,-.33]],'#202a30','#657579',.013);
+    for(let i=0;i<18;i++){
+      const x=-.61+i*.067;
+      line([[x,-.3],[x+.052,-.25]],'#5f70746e',.015);
+    }
+    poly([[1.95,.012],[2.18,-.008],[2.22,.045],[2.01,.066]],'#202a30','#8a9695',.013);
+    const wingHeight=bodyLevel>=7?.83:.64;
+    poly([[-2.3,wingHeight],[-2.17,wingHeight+.03],[-2.17,wingHeight+.12],[-2.3,wingHeight+.09]],'#1f2b30','#899593',.012);
+  }
+  if(levels[0]>=4 || kits[0]){
+    poly([[1.12,.42],[1.21,.53],[1.6,.49],[1.7,.38]],'#4c5856','#262e30');
+    for(let i=0;i<3;i++)line([[1.26+i*.08,.5],[1.29+i*.08,.43]],'#202b2f',.024);
+  }
+  if(bodyLevel===8){
+    poly([[-2.06,-.16],[-1.92,-.19],[-1.96,-.33],[-2.25,-.31]],'#253137','#b99b5e');
+    for(let i=0;i<3;i++) line([[-2.2+i*.07,-.27],[-2.24+i*.07,-.35]],'#29383c',.026);
+    line([[-.68,-.34],[.67,-.34]],'#eab84a',.031);
   }
   // Lamps and bumpers live outside the body silhouette, away from the arches.
   poly([[-2.088,.2],[-1.94,.2],[-1.94,.02],[-2.08,.02]],'#632829','#2b3030');
@@ -153,8 +207,10 @@ export function drawClassicBody(c, xray, soot, bodyLevel) {
   line([[2.04,.055],[2.04,.2]],'#fff6d5',.022);
   rect(2.02,-.07,.075,.07,'#db9c45');
   for(const [a,b] of [[-2.17,-1.88],[1.91,2.18]]){
+    c.save();
+    if(bodyLevel===1 && a<0){c.translate(a,-.23);c.rotate(.15);c.translate(-a,.23);}
     rect(a,-.28,b-a,.12,'#283032');rect(a,-.24,b-a,.08,chrome);
-    rect(a+.045,-.29,.045,.15,'#323736');
+    rect(a+.045,-.29,.045,.15,'#323736');c.restore();
   }
   // Door mirror and windshield wiper.
   line([[.72,.43],[.81,.55]],'#c1c6bd',.025);

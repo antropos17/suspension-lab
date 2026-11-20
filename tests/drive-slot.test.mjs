@@ -2,46 +2,67 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDriveSlot, scoreParts } from '../src/drive-slot.js';
 import { createSimulation, STEP } from '../src/physics.js';
-import { readGarage, fitParts, levelOf, advanceGarage } from '../src/garage.js';
+import { readGarage, fitParts, levelOf, advanceGarage, purchase } from '../src/garage.js';
 
-test('all groups and compatible assemblies pay their own parts', () => {
-  assert.deepEqual(scoreParts([0,1,2,3,4,5]).gains,[1,1,1,1,1,1]);
-  assert.deepEqual(scoreParts([3,1,2,3,1,4]).winners,[1,3]);
-  assert.deepEqual(scoreParts([0,1,0,1,0,5]).gains,[7,3,0,0,0,0]);
-  assert.match(scoreParts([0,1,0,1,0,5]).name,/Фулл-хаус/);
-  assert.match(scoreParts([0,1,0,1,2,2]).name,/Три пары/);
-  assert.equal(scoreParts([5,5,5,5,5,5]).seconds,9.5);
+test('3x3 recognises all eight paylines, scatter rewards and mechanical synergies',()=>{
+  const square=scoreParts(Array(9).fill(0));
+  assert.equal(square.lines.length,8);assert.equal(square.seconds,9.5);
+  const cross=scoreParts([8,0,9,0,8,9,1,2,8]);
+  assert.deepEqual(cross.lines,[[0,4,8]]);
+  assert.equal(cross.coins,64);assert.equal(cross.gems,2);
+  const parts=scoreParts([0,1,0,1,0,5,6,7,6]);
+  assert.equal(parts.gains[0],7);assert.equal(parts.gains[1],3);
+  assert.equal(scoreParts([0,1,2,3,4,5,6,7,8]).seconds,2);
 });
 
-test('one held reel survives the next spin; a manually driven spin settles exactly once', () => {
-  let choice = .01;
-  const slot = createDriveSlot(()=>choice);
-  slot.spin(0); slot.update(1,true);
-  const reward = slot.update(2,false);
-  assert.equal(reward.count,6); assert.equal(slot.phase,'ready');
-  assert.equal(slot.update(3,false), undefined);
-  slot.hold(2); slot.hold(4); choice = .99; slot.spin(4);
-  assert.deepEqual(slot.parts,[5,5,5,5,0,5]);
+test('a hold keeps all three cells in one column, and rolls settle exactly once',()=>{
+  let choice=0;
+  const slot=createDriveSlot(()=>choice);
+  slot.spin(0);assert.equal(slot.spin(.3),false);slot.update(.5,true);
+  assert.equal(slot.update(2,false).count,9);assert.equal(slot.phase,'ready');
+  assert.equal(slot.update(3,false),undefined);
+  slot.hold(1);choice=.99;slot.spin(4);
+  assert.deepEqual(slot.parts,[9,0,9,9,0,9,9,0,9]);
+  slot.reset();assert.equal(slot.update(9,false),undefined);
 });
 
-test('saved garage levels survive reload, cap and recover from invalid saves', () => {
-  const garage=readGarage('broken');
-  const changes=fitParts(garage,[2,0,3,0,0,30]);
-  assert.deepEqual(changes[0],{gain:2,from:1,to:2});
-  assert.equal(levelOf(garage.points[5]),5);
-  assert.deepEqual(readGarage(JSON.stringify(garage)),garage);
-  assert.equal(fitParts(garage,[0,0,0,0,0,30])[5].gain,0);
+test('migration keeps old levels and records; wallet purchases have exact prices and bounded permanent effects',()=>{
+  const g=readGarage(JSON.stringify({points:[20,12,6,2,0,20],best:84}));
+  assert.deepEqual(g.points.map(levelOf),[5,4,3,2,1,5,1,1]);assert.equal(g.best,84);
+  assert.equal(purchase(g,'part',0),null);assert.equal(purchase(g,'kit',0),null);
+  g.coins=30;g.gems=4;
+  assert.equal(purchase(g,'part',6)[6].to,2);assert.equal(g.coins,0);
+  assert.ok(purchase(g,'kit',1));assert.equal(g.gems,0);assert.equal(g.kits[1],true);
+  g.gems=10;assert.equal(purchase(g,'kit',1),null);assert.equal(g.gems,10);
+  assert.deepEqual(readGarage(JSON.stringify(g)),g);
+  fitParts(g,Array(8).fill(100));g.coins=500;
+  assert.equal(purchase(g,'part',5),null);assert.equal(g.coins,500);
 });
 
-test('road prizes stack with the matching roll and surviving records cannot pay twice', () => {
-  const garage = readGarage(null);
-  advanceGarage(garage,55,scoreParts([0,0,1,2,3,4]));
-  assert.deepEqual(garage.points,[2,0,1,1,0,0]);
-  const next = readGarage(JSON.stringify(garage));
-  advanceGarage(next,10); advanceGarage(next,55);
-  assert.deepEqual(next,garage);
-  advanceGarage(next,260);
-  assert.deepEqual(next.points,[5,3,3,3,2,2]);
+test('checkpoint and spin currencies stack once and survive reloading',()=>{
+  const g=readGarage(null);
+  advanceGarage(g,55,scoreParts([0,0,1,2,3,4,5,8,9]));
+  assert.deepEqual(g.points,[2,0,1,1,0,0,0,0]);assert.equal(g.coins,29);assert.equal(g.gems,2);
+  const restored=readGarage(JSON.stringify(g));advanceGarage(restored,55);
+  assert.deepEqual(restored,g);
+  advanceGarage(restored,260);
+  assert.deepEqual(restored.points,[5,3,3,3,2,2,3,2]);
+});
+
+test('nitro boosts wheel motors, depletes, brakes take priority, and distance refills the tank',()=>{
+  const runs=[false,true].map(nitro=>{
+    const s=createSimulation({levels:Array(8).fill(1),heightAt:()=>0});
+    for(let i=0;i<120;i++)s.step();
+    for(let i=0;i<145;i++)s.step(1,false,nitro);
+    return s;
+  });
+  const [base,boost]=runs;
+  assert.ok(boost.body.getLinearVelocity().x>base.body.getLinearVelocity().x+.5);
+  for(let i=0;i<100;i++)boost.step(1,false,true);
+  assert.equal(boost.nitroCharge,0);assert.equal(boost.boosting,false);
+  for(let i=0;i<120;i++)boost.step(1);
+  assert.ok(boost.nitroCharge>0);
+  boost.step(1,true,true);assert.equal(boost.boosting,false);
 });
 
 test('career builds improve measured launch and speed; fitting wheels updates existing contact friction', () => {
@@ -74,7 +95,7 @@ test('a spin resolves once on game time, ignores repeat presses and yields to ma
   assert.equal(slot.phase, 'rolling');
   slot.update(12, false);
   assert.equal(slot.phase, 'driving');
-  assert.deepEqual(slot.parts, [5,5,5,5,5,5]);
+  assert.deepEqual(slot.parts, Array(9).fill(9));
   assert.equal(slot.spin(12), false);
   slot.update(12, true);
   assert.equal(slot.phase, 'ready');
@@ -87,7 +108,7 @@ test('a spin resolves once on game time, ignores repeat presses and yields to ma
 test('the shortest combination drives each transmission through ground contacts and expires', () => {
   for (const drive of ['fwd','rwd','awd']) {
     let index = 0;
-    const slot = createDriveSlot(() => (index++ + .5) / 6);
+    const slot = createDriveSlot(() => (index++ + .5) / 10);
     const sim = createSimulation({ drive, levels:Array(6).fill(1) });
     slot.spin(0);
     let poweredSteps = 0;

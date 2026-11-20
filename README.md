@@ -8,8 +8,9 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 
 - A: reverse. D: accelerate. Arrow keys also work.
 - Space: brake. P: pause. R: restart.
-- S rolls the workshop reels. Each matching group grants points to its own part, and matched mechanical pairs give synergy bonuses. Six distinct parts award the whole garage. Click a settled reel to hold one symbol for the next spin. A/D and the pedals can take over the throttle while the roll still resolves. P pauses the game clock.
-- Engine, gearbox, tires, suspension, brakes and bodywork each have five levels. The local browser garage persists across restarts. First reaching 55, 120 and 260 metres awards workshop points. Bodywork progresses from rusty steel to restored two-tone paint and a final rear spoiler.
+- S rolls three reels with three visible cells each. Matching parts anywhere earn workshop points. Three in a horizontal, vertical or diagonal line earn extra points or currency. Click one stopped column to keep all three symbols for the next free roll. A/D and the pedals take over the throttle.
+- Engine, gearbox, wheels, suspension, brakes, body, exhaust and nitro each have eight levels. Coins buy the next level of a chosen part. Diamonds buy a permanent compressor, bigger nitro tank or carbon body kit. First passing 55, 120 and 260 metres also earns currency and part points. The garage migrates earlier saves in the same browser.
+- Hold N or the N₂O pedal for boost. Driving with nitro released refills a complete tank over 60 metres. Brake and reverse take priority. A fresh car starts with broken windows, corroded steel rims and heavy exhaust smoke. Bodywork advances through restored enamel, a ducktail, wider arches and competition wings.
 - Touch controls are available on screen.
 - Reach the finish along the 260 m trail. Restart if you roll over.
 - Spring stiffness and shock damping affect the simulation immediately. Show chassis reveals the suspension.

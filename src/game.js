@@ -7,8 +7,10 @@ import { createBakuBackdrop } from './baku-background.js';
 import { createSmokeRenderer } from './smoke-renderer.js';
 import { createDriveSlot } from './drive-slot.js';
 import { createSlotPanel } from './slot-panel.js';
-import { readGarage, advanceGarage, levelOf, CHECKPOINTS, PART_NAMES } from './garage.js';
+import { readGarage, advanceGarage, levelOf, CHECKPOINTS, PART_NAMES, SPECIALS, purchase, buildSpec } from './garage.js';
 import { createGaragePanel } from './garage-panel.js';
+import { drawRim } from './part-art.js';
+import { createShop } from './shop.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
 const smokeCanvas=document.createElement('canvas'),smokeCtx=smokeCanvas.getContext('2d');
@@ -25,19 +27,24 @@ let sim, paused = false, finished = false, xray = false, drive = 'awd', accumula
 let width = 1000, height = 500, scale = 64, hudAt=0, needsRedraw=true;
 const keys = new Set(), touches = new Set();
 const slot = createDriveSlot();
-const drawSlot = createSlotPanel(slot, $('slot-bank'), $('spin'), $('slot-status'), $('slot-time'));
-const saveKey = 'suspension-lab.garage.v1';
-function loadGarage() {
-  try { return readGarage(localStorage.getItem(saveKey)); } catch { return readGarage(null); }
+const drawSlot = createSlotPanel(slot, $('slot-bank'), $('spin'), $('slot-status'), $('slot-time'),()=>levels);
+const oldKey='suspension-lab.garage.v1', saveKey='suspension-lab.garage.v2';
+let storageAvailable=true;
+function loadGarage(fallback) {
+  if(storageAvailable){
+    try { return readGarage(localStorage.getItem(saveKey) ?? localStorage.getItem(oldKey)); }
+    catch { storageAvailable=false; }
+  }
+  return fallback ?? readGarage(null);
 }
-const garage = loadGarage();
-let levels = garage.points.map(levelOf);
+let garage=loadGarage(), levels=garage.points.map(levelOf), spec=buildSpec(levels,garage.kits);
 let fitHighlights = [], fittedAt = 0;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const drawGarage = createGaragePanel($('rack-left'), $('rack-right'), $('build-level'));
-drawGarage(garage);
+const drawShop=createShop($('shop-items'),$('wallet'),buyItem);
+drawGarage(garage);drawShop(garage);
 let routePeak = garage.best, queuedPeak = garage.best, telemetryTime = 0, telemetrySpeed = 0;
-const peakKey = saveKey+'.distance';
+const peakKey = oldKey+'.distance';
 try {
   const latest = Number(localStorage.getItem(peakKey));
   if(Number.isInteger(latest) && latest<=FINISH) routePeak=Math.max(routePeak,latest);
@@ -50,38 +57,42 @@ function flushDistance() {
     if(routePeak > (Number(localStorage.getItem(peakKey)) || 0)) localStorage.setItem(peakKey,String(routePeak));
   } catch {}
 }
-function recordProgress(reward, meters) {
-  queuedPeak = Math.max(queuedPeak,meters);
-  const apply = () => {
-    const saved = loadGarage();
-    garage.points = garage.points.map((n,i)=>Math.max(n,saved.points[i]));
-    garage.best = Math.max(garage.best,saved.best);
-    const {changes,crossed} = advanceGarage(garage,meters,reward);
-    try { localStorage.setItem(saveKey,JSON.stringify(garage)); } catch {}
-    levels = garage.points.map(levelOf);
-    sim.setBuild(levels);
-    if(changes.some(c=>c.to>c.from) && !reduceMotion.matches) {
-      fittedAt = sim.elapsed;
-      fitHighlights = changes.flatMap((c,i)=>c.to>c.from ? [i] : []);
-      needsRedraw = true;
-    }
-    drawGarage(garage,changes,reward ? $('slot-bank') : null);
-    if (reward) {
-      reward.receipt = changes.flatMap((c,i)=>c.gain ? [PART_NAMES[i]+' '+(c.to>c.from ? c.from+'→'+c.to : '+'+c.gain)] : []).join(', ');
-      needsRedraw = true;
-    }
-    if(crossed.length) $('route-award').textContent = crossed.at(-1).title+' · детали получены';
-  };
-  if(navigator.locks) navigator.locks.request(saveKey,apply);
-  else apply();
+function refreshBuild(changes,reels) {
+  levels=garage.points.map(levelOf);spec=buildSpec(levels,garage.kits);
+  sim?.setBuild(levels,garage.kits);
+  if(changes?.some(c=>c.to>c.from) && !reduceMotion.matches) {
+    fittedAt=sim.elapsed;fitHighlights=changes.flatMap((c,i)=>c.to>c.from ? [i] : []);
+  }
+  drawGarage(garage,changes,reels);drawShop(garage);needsRedraw=true;
 }
-window.addEventListener('storage', e => {
-  if (e.key !== saveKey || !e.newValue) return;
-  const saved = readGarage(e.newValue);
-  garage.points = garage.points.map((n,i)=>Math.max(n,saved.points[i]));
-  garage.best = Math.max(garage.best,saved.best); routePeak = Math.max(routePeak,garage.best);
-  levels = garage.points.map(levelOf);
-  sim?.setBuild(levels); drawGarage(garage); needsRedraw = true;
+function transact(change) {
+  const apply=()=>{
+    garage=loadGarage(garage);
+    change();
+    if(storageAvailable) try { localStorage.setItem(saveKey,JSON.stringify(garage)); } catch { storageAvailable=false; }
+  };
+  return navigator.locks ? navigator.locks.request(saveKey,apply) : apply();
+}
+function buyItem(kind,index,expected) {
+  return transact(()=>{
+    const stale=kind==='part' && levelOf(garage.points[index])!==expected;
+    const changes=stale ? null : purchase(garage,kind,index);
+    refreshBuild(changes);
+    $('shop-notice').textContent=changes ? (kind==='kit' ? SPECIALS[index].name+' установлен' : PART_NAMES[index]+' · уровень '+levels[index]) : 'Предложение обновилось';
+  });
+}
+function recordProgress(reward, meters) {
+  queuedPeak=Math.max(queuedPeak,meters);
+  return transact(()=>{
+    const {changes,crossed}=advanceGarage(garage,meters,reward);
+    if(reward) reward.receipt=changes.flatMap((c,i)=>c.to>c.from ? [PART_NAMES[i]+' '+c.from+'→'+c.to] : []).join(', ');
+    if(crossed.length) $('route-award').textContent=crossed.at(-1).title+' · +'+crossed.reduce((n,c)=>n+c.coins,0)+' монет · +'+crossed.reduce((n,c)=>n+c.gems,0)+' алм.';
+    refreshBuild(changes,reward ? $('slot-bank') : null);
+  });
+}
+window.addEventListener('storage',e=>{
+  if(e.key!==saveKey) return;
+  garage=loadGarage(garage);routePeak=Math.max(routePeak,garage.best);refreshBuild();
 });
 window.addEventListener('pagehide', flushDistance);
 function spin() {
@@ -101,7 +112,7 @@ function reset() {
   samples.length=0;profileTicks=0;drawCount=0;
   exhaust = createExhaust(); exhaust.setIntensity(+$('soot').value);
   clearInput(); sim??=createSimulationClient();smokeTime=0;
-  sim.reset({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value, levels });
+  sim.reset({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value, levels,kits:garage.kits });
   paused = finished = false; accumulator = 0; camera = { x: 3, y: 1.4 }; $('overlay').hidden = true; $('pause').textContent = 'Пауза';
   $('notice').textContent = 'До брусчатки 55 м';
 }
@@ -129,7 +140,7 @@ document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click
 $('pause').addEventListener('click', () => pause()); $('reset').addEventListener('click', reset); $('resume').addEventListener('click', () => finished ? reset() : pause(false));
 $('xray').addEventListener('click', () => { xray = !xray; needsRedraw=true;$('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Скрыть шасси' : 'Показать шасси'; });
 window.addEventListener('keydown', e => {
-  if (e.target instanceof HTMLInputElement && !['KeyA','KeyD','Space','KeyR','KeyP','KeyS'].includes(e.code)) return;
+  if (e.target instanceof HTMLInputElement && !['KeyA','KeyD','Space','KeyR','KeyP','KeyS','KeyN'].includes(e.code)) return;
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
   if (e.code === 'KeyR') reset(); else if (e.code === 'KeyP') pause(); else if(e.code === 'KeyS') spin(); else keys.add(e.code);
@@ -174,7 +185,7 @@ function spring(a,b) {
   const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy),nx=-dy/len,ny=dx/len;
   const p=[[X(a.x),Y(a.y)]];
   for(let i=1;i<12;i++){const t=i/12,offset=(i%2?1:-1)*.085;p.push([X(a.x+dx*t+nx*offset),Y(a.y+dy*t+ny*offset)]);}
-  p.push([X(b.x),Y(b.y)]);line(p,'#d5a840',3);
+  p.push([X(b.x),Y(b.y)]);line(p,['#64584c','#796555','#928c79','#b95839','#d5a840','#da593c','#477fb1','#e5ad43'][levels[3]-1],3);
 }
 function car() {
   const body=sim.body, pos=body.getPosition();
@@ -210,16 +221,38 @@ function car() {
     circle(0,0,r*.23,wheelLevel===1?'#766f60':'#c3c4b0',wheelLevel===1?'#99917d':'#e8e5d1',1);
     for(let j=0;j<4;j++){const a=j*Math.PI/2;circle(Math.cos(a)*r*.18,Math.sin(a)*r*.18,r*.035,'#4c574d','#d8d6c0',.6);}
     circle(0,0,r*.105,'#737f72','#d0d0b8',1);
+    drawRim(ctx,wheelLevel,r*.51);
     line([[r*.43,0],[r*.49,0]],'#18271f',2); // valve breaks rotational symmetry
     ctx.restore();
+    if(levels[4]>=3){
+      ctx.save();ctx.translate(X(hub.x),Y(hub.y));ctx.rotate(-body.getAngle());
+      ctx.beginPath();ctx.arc(0,0,r*.48,-.58,.22);
+      ctx.strokeStyle=levels[4]>=7?'#d69c34':levels[4]>=4?'#bd5141':'#767a70';
+      ctx.lineWidth=r*.095;ctx.stroke();ctx.restore();
+    }
   });
   ctx.save();ctx.translate(X(pos.x),Y(pos.y));ctx.rotate(-body.getAngle());ctx.scale(scale,-scale);
-  drawClassicBody(ctx,xray,exhaust.soot,levels[5]);ctx.restore();
+  drawClassicBody(ctx,xray,exhaust.soot,levels,garage.kits);ctx.restore();
   const tip=sim.exhaustMount.point,pipe=local(-1.62,-.22),can=local(-1.87,-.24+sim.exhaustMount.offset*.7);
-  line([[X(pipe.x),Y(pipe.y)],[X(can.x),Y(can.y)],[X(tip.x),Y(tip.y)]],'#9a9e97',4);
+  const pipeColor=['#6c5041','#786756','#979184','#a9b2ac','#b4bfbb','#ccd1c6','#7f7dba','#cc9a51'][levels[6]-1];
+  line([[X(pipe.x),Y(pipe.y)],[X(can.x),Y(can.y)],[X(tip.x),Y(tip.y)]],pipeColor,3+levels[6]*.35);
+  if(sim.boosting){
+    const flame=.18+.24*Math.abs(Math.sin(sim.elapsed*37)), tail=local(-2.12-flame,-.29);
+    polygon([[X(tip.x),Y(tip.y)-3],[X(tail.x),Y(tail.y)],[X(tip.x),Y(tip.y)+3]],'#79cfff');
+    line([[X(tip.x),Y(tip.y)],[(X(tip.x)+X(tail.x))/2,(Y(tip.y)+Y(tail.y))/2]],'#fff0bd',2);
+  }
   circle(X(can.x),Y(can.y),4,'#626d6b');
   const hanger=local(-1.87,-.12);line([[X(hanger.x),Y(hanger.y)],[X(can.x),Y(can.y)]],'#343a37',2);
   circle(X(tip.x),Y(tip.y),1.9,'#151b1d');
+  if(xray){
+    const gearbox=local(.38,-.05),tail=local(-.87,-.16),nose=local(.88,-.09);
+    line([[X(tail.x),Y(tail.y)],[X(gearbox.x),Y(gearbox.y)],[X(nose.x),Y(nose.y)]],levels[1]>=5?'#dad4b7':'#8b8372',3);
+    ctx.save();ctx.translate(X(gearbox.x),Y(gearbox.y));ctx.rotate(-body.getAngle());
+    polygon([[-10,2],[-6,-4],[6,-5],[12,-2],[12,4],[-6,5]],levels[1]>=6?'#959e97':'#756d5c','#423e36');
+    const ribs=2+Math.floor(levels[1]/2);
+    for(let j=0;j<ribs;j++)line([[-5+j*2.5,-3],[-6+j*2.5,3]],'#c2c3ab',1);
+    ctx.restore();
+  }
   if(xray)sim.rims.forEach((w,i)=>spring(local(i===0?-1.25:1.25,-.05),w.getPosition()));
   if(fitHighlights.length){
     const age = (sim.elapsed-fittedAt)/1.2;
@@ -231,7 +264,7 @@ function car() {
       for(const part of fitHighlights){
         const hubs = sim.rims.map(r=>r.getPosition());
         const locations = part===2 || part===4 ? hubs : part===3 ? [local(-1.25,-.07),local(1.25,-.07)] :
-          [part===0 ? local(1.37,.23) : part===1 ? local(.45,-.12) : local(-.54,.23)];
+          [part===0 ? local(1.37,.23) : part===1 ? local(.45,-.12) : part===6 ? tip : part===7 ? local(-.83,.54) : local(-.54,.23)];
         for(const p of locations){
           const radius = scale*((part===2?.44:.19)+.27*age);
           ctx.beginPath();ctx.arc(X(p.x),Y(p.y),radius,0,Math.PI*2);ctx.stroke();
@@ -245,6 +278,7 @@ function frame(now) {
   const start=profiling?performance.now():0;
   const frameGap=now-last;
   const dt=Math.min((now-last)/1000,.05);last=now;
+  if(width<1 || height<1){requestAnimationFrame(frame);return;}
   if(!sim.ready){
     drawSlot(sim.elapsed, true);
     scenery();
@@ -256,14 +290,15 @@ function frame(now) {
     const forward=keys.has('ArrowRight')||keys.has('ArrowUp')||keys.has('KeyD')||touches.has('forward');
     const reverse=keys.has('ArrowLeft')||keys.has('ArrowDown')||keys.has('KeyA')||touches.has('reverse');
     const brake=keys.has('Space')||touches.has('brake');
-    const reward = slot.update(sim.elapsed, forward || reverse || brake);
+    const boost=keys.has('KeyN') || touches.has('nitro');
+    const reward = slot.update(sim.elapsed, forward || reverse || brake || boost);
     if (reward) {
       drawSlot(sim.elapsed,false);
       recordProgress(reward,routePeak);
     }
-    sim.advance(dt, slot.phase === 'driving' ? 1 : Number(forward)-Number(reverse), brake);
+    sim.advance(dt, slot.phase === 'driving' ? 1 : Number(forward)-Number(reverse), brake, boost);
     accumulator=Math.min(.05,accumulator+Math.max(0,sim.elapsed-smokeTime));smokeTime=sim.elapsed;
-    while(accumulator>=STEP-1e-10){exhaust.step(sim,STEP);accumulator-=STEP;}
+    while(accumulator>=STEP-1e-10){exhaust.step(sim,STEP,spec.smokeFactor);accumulator-=STEP;}
     if(sim.body.getPosition().x>=FINISH+3){
       finished=true;
       const finalReward=slot.update(slot.ends,true);
@@ -293,6 +328,7 @@ function frame(now) {
     $('acceleration').textContent = 'Разгон '+(Math.round(accel*10)/10).toFixed(1)+' м/с²';
     telemetrySpeed = signedSpeed; telemetryTime = sim.elapsed;
   }
+  $('nitro-charge').textContent=Math.round(sim.nitroCharge*100)+'%';$('nitro').classList.toggle('active',sim.boosting);
   $('pressure-live').textContent=`Rear ${sim.tires[0].pressureBar.toFixed(2)} / Front ${sim.tires[1].pressureBar.toFixed(2)} bar`;
   $('rear').value=sim.joints[0].getJointTranslation();$('front').value=sim.joints[1].getJointTranslation();
   if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Машина перевернулась. Нажми R для нового заезда.':pos.x>53&&pos.x<91?'Брусчатка':pos.x>116&&pos.x<153?'Подъём':sim.elapsed<5?'До брусчатки 55 м':'';}

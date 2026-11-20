@@ -32,23 +32,23 @@ export function createSimulationClient(worker=new Worker('/physics-worker.js')) 
       worker.postMessage({type:'reset',generation,settings});
     },
     setDrive(drive){settings.drive=drive;},
-    setBuild(levels){settings.levels=[...levels];},
+    setBuild(levels,kits=[]){settings.levels=[...levels];settings.kits=[...kits];},
     setPressure(pressure){settings.pressure=pressure;},
     tune(frequency,damping){settings.frequency=frequency;settings.damping=damping;},
     suspend(){accumulator=0;},
-    advance(dt,throttle,brake){
+    advance(dt,throttle,brake,nitro=false){
       if(!client.ready||client.error)return;
       playback.advance(dt);
       accumulator=Math.min(STEP*6,accumulator+Math.max(0,dt));
       const steps=Math.min(6,Math.floor((accumulator+1e-10)/STEP));
       if(pending||!steps)return;
       accumulator-=steps*STEP;pending=true;
-      worker.postMessage({type:'step',generation,steps,throttle,brake,settings:{...settings}});
+      worker.postMessage({type:'step',generation,steps,throttle,brake,nitro,settings:{...settings}});
     },
     dispose(){worker.terminate();}
   });
   // Getters must stay live: Object.assign would evaluate them prematurely.
-  for(const key of ['elapsed','engineLoad','accelerator','exhaustMount'])Object.defineProperty(client,key,{get:()=>state?.[key]??(key==='exhaustMount'?null:0),configurable:true});
+  for(const key of ['elapsed','engineLoad','accelerator','exhaustMount','nitroCharge','boosting'])Object.defineProperty(client,key,{get:()=>state?.[key]??(key==='exhaustMount'?null:0),configurable:true});
   Object.defineProperty(client,'bufferMs',{get:()=>playback.bufferMs});
   Object.defineProperty(client,'renderHolds',{get:()=>playback.holds});
   worker.onmessage=({data})=>{

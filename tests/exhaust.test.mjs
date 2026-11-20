@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { buildSpec } from '../src/garage.js';
 import { createExhaust } from '../src/exhaust.js';
 const simulation=(gas,load)=>({accelerator:gas,engineLoad:load,body:{
   getWorldPoint:p=>p,getWorldVector:p=>p,getLinearVelocityFromWorldPoint:()=>({x:0,y:0})
@@ -36,4 +37,15 @@ test('billows spread, linger after fuel cut, then completely dissipate',()=>{
   assert.ok(Math.max(...xs)-Math.min(...xs)>.8,'eddies disperse the cloud horizontally');
   for(let i=0;i<960;i++)effect.step(simulation(0,0),1/120);
   assert.equal(effect.particles.length,0,'old smoke cannot accumulate forever');
+});
+
+test('a worn idling car emits visibly darker smoke than a restored build',()=>{
+  const idle=simulation(0,0);
+  const [stock,restored]=[1,8].map(level=>{
+    const effect=createExhaust(()=>.5),spec=buildSpec(Array(8).fill(level));
+    for(let i=0;i<360;i++)effect.step(idle,1/120,spec.smokeFactor);
+    return effect;
+  });
+  assert.ok(stock.particles.length>restored.particles.length*3);
+  assert.ok(stock.particles[0].dark>.8 && restored.particles[0].dark<.1);
 });

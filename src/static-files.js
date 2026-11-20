@@ -1,6 +1,6 @@
 import {readFile,stat} from 'node:fs/promises';
 import path from 'node:path';
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp'};
 
 export function createStaticHandler(root){
   root=path.resolve(root);

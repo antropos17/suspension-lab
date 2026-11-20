@@ -14,24 +14,28 @@
       <div id="notice" class="notice" role="status">До брусчатки 55 м</div>
       <div class="terrain-label">Bakı coastline <span id="route-award" role="status"></span></div>
       <div id="overlay" class="overlay" hidden><div><p id="overlay-caption">Take a breath.</p><h2 id="overlay-title">Paused</h2><button id="resume">Keep driving</button></div></div>
-      <div class="pedals"><button data-control="reverse" aria-label="Reverse">◀</button><button data-control="brake" class="brake" aria-label="Brake">Тормоз</button><button data-control="forward" aria-label="Accelerate">▶</button></div>
+      <div class="pedals"><button id="nitro" data-control="nitro" aria-label="Нитро, удерживать N" aria-keyshortcuts="N">N₂O <b id="nitro-charge">100%</b></button><button data-control="reverse" aria-label="Reverse">◀</button><button data-control="brake" class="brake" aria-label="Brake">Тормоз</button><button data-control="forward" aria-label="Accelerate">▶</button></div>
     </section>
     <section class="drive-slot" aria-labelledby="slot-title" lang="ru">
       <div class="part-rack" id="rack-left" aria-label="Силовая установка и колёса"></div>
       <div class="reel-console">
         <div class="slot-heading"><h2 id="slot-title">Гараж на колёсах</h2><span id="build-level"></span></div>
-        <div class="slot-bank" id="slot-bank" role="group" aria-label="Шесть барабанов"></div>
-        <div class="slot-controls"><button id="spin" aria-keyshortcuts="S" disabled>Крутить и ехать <kbd>S</kbd></button>
-          <div><span id="slot-status" role="status">Собери пару, чтобы улучшить деталь</span><span id="slot-time" aria-hidden="true"></span></div>
-        </div>
+        <div class="slot-machine"><div class="slot-bank" id="slot-bank" role="group" aria-label="Три барабана по три символа"></div>
+        <div class="slot-controls"><div id="wallet" aria-label="Кошелёк"></div>
+          <button id="spin" aria-keyshortcuts="S" disabled>Крутить и ехать <kbd>S</kbd></button>
+          <div class="spin-receipt"><span id="slot-status" role="status">Пара деталей улучшает узел.</span> <span id="slot-time"></span></div>
+        </div></div>
         <details class="recipes"><summary>Комбинации и фиксация барабана</summary>
-          <p>Две одинаковые детали дают узлу 2 очка, тройка — 6, каре — 12. Несколько групп улучшаются вместе. Шесть разных деталей дают по очку всем узлам.</p>
-          <p>Пары мотора и коробки, колёс и подвески или колёс и тормозов дают обоим узлам ещё по очку. После прокрутки нажми один барабан, чтобы оставить его символ на следующий ход.</p>
-          <p>Первый проезд 55 м приносит очки колёсам и подвеске, 120 м — двигателю и коробке. На 260 м все узлы получают по два очка.</p>
+          <p>Две одинаковые детали в любом месте дают 2 очка узлу, три — 6, четыре — 12. Три одинаковых символа по горизонтали, вертикали или диагонали дают ещё 4 очка детали, 30 монет или 3 алмаза.</p>
+          <p>Каждая прокрутка приносит 4 монеты. Знак монет добавляет 10 монет, алмаз — 1 алмаз. Пары двигателя и коробки, колёс и подвески, колёс и тормозов, выхлопа и нитро дают по дополнительному очку обоим узлам.</p>
+          <p>Нажми барабан после остановки, чтобы зафиксировать весь столбец на следующую прокрутку. Отметки 55, 120 и 260 м при первом проезде дают детали, монеты и алмазы. Удерживай N для нитро. На ходу заряд восстанавливается.</p>
         </details>
       </div>
       <div class="part-rack" id="rack-right" aria-label="Подвеска, тормоза и кузов"></div>
     </section>
+    <details class="tuning-shop"><summary>Магазин тюнинга <small>Детали и спецкомплекты</small></summary>
+      <div id="shop-items"></div><div id="shop-notice" role="status"></div>
+    </details>
     <details class="manual-settings"><summary>Настройки шасси и привода</summary>
     <section class="workbench" aria-label="Suspension settings">
       <div class="intro"><h2>Настройка шасси</h2><p>Давление и демпфирование можно менять на ходу.</p><button id="xray" aria-pressed="false">Показать шасси</button><div class="soot-control"><label for="soot">Копоть <output id="soot-value">3.0x</output></label><input id="soot" type="range" min="0" max="6" step="0.1" value="3"><div class="range-labels"><span>Нет</span><span>Много</span></div></div></div>
@@ -39,7 +43,7 @@
       <div class="setup"><span>Привод</span><div class="drive-options" role="group" aria-label="Drive type"><button data-drive="fwd" aria-pressed="false">Передний</button><button data-drive="rwd" aria-pressed="false">Задний</button><button data-drive="awd" class="selected" aria-pressed="true">Полный</button></div><span>Настройки</span><div class="presets"><button data-preset="comfort">Комфорт</button><button data-preset="trail" class="selected">Трасса</button><button data-preset="sport">Спорт</button></div><div class="suspension-readout"><span>Rear <meter id="rear" min="-0.6" max="0.6" value="0" aria-label="Rear suspension travel"></meter></span><span>Front <meter id="front" min="-0.6" max="0.6" value="0" aria-label="Front suspension travel"></meter></span></div></div>
     </section>
     </details>
-    <footer><span><kbd>S</kbd> Прокрутка <i></i><kbd>A</kbd> Назад <i></i><kbd>D</kbd> Газ <i></i><kbd>Space</kbd> Тормоз <i></i><kbd>R</kbd> Новый заезд</span></footer>
+    <footer><span><kbd>S</kbd> Прокрутка <i></i><kbd>A</kbd> Назад <i></i><kbd>D</kbd> Газ <i></i><kbd>N</kbd> Нитро <i></i><kbd>Space</kbd> Тормоз <i></i><kbd>R</kbd> Новый заезд</span></footer>
   </main>
   <script src="game.js"></script>
 </body></html>

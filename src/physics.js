@@ -9,7 +9,7 @@ export { terrainHeight } from './terrain.js';
 import { STEP } from './vehicle-constants.js';
 export { FINISH, STEP } from './vehicle-constants.js';
 
-export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd', pressure = 2.2, nodeCount = 32, substeps = 8, heightAt = terrainHeight, levels } = {}) {
+export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd', pressure = 2.2, nodeCount = 32, substeps = 8, heightAt = terrainHeight, levels, kits } = {}) {
   substeps=Math.max(substeps,Math.ceil(nodeCount/32)*8);
   const world = new World(Vec2(0, -9.81));
   const ground = world.createBody();
@@ -54,9 +54,10 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   const joints = stops;
   const motors = wheels.map((w,i)=>world.createJoint(new RevoluteJoint({enableMotor:true,maxMotorTorque:0},rims[i],w,w.getPosition())));
   const tires = wheels.map(w=>createPneumaticTire(world,w,{pressure,count:nodeCount}));
-  let spec = {torque:2400,launch:5,wheelSpeed:22,friction:1.5,damperLimit:3000,brakeTorque:1600};
-  function setBuild(nextLevels) {
-    const next = buildSpec(nextLevels);
+  let spec = {torque:2400,launch:5,wheelSpeed:22,friction:1.5,damperLimit:3000,brakeTorque:1600,boostDuration:1.6,boostFactor:1.34};
+  let nitroCharge=1, boosting=false;
+  function setBuild(nextLevels, nextKits) {
+    const next = buildSpec(nextLevels,nextKits);
     if (next.friction !== spec.friction) {
       for (const tire of tires) for (const node of tire.nodes) {
         node.getFixtureList().setFriction(next.friction);
@@ -65,7 +66,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
     }
     spec = next;
   }
-  if (levels) setBuild(levels);
+  if (levels) setBuild(levels,kits);
   const exhaustMount = createExhaustMount(body);
   let elapsed = 0;
   let engineLoad = 0, accelerator = 0;
@@ -94,16 +95,26 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
     get elapsed() { return elapsed; },
     get engineLoad() { return engineLoad; },
     get accelerator() { return accelerator; },
+    get nitroCharge() { return nitroCharge; },
+    get boosting() { return boosting; },
     setDrive(mode) { if (['fwd', 'rwd', 'awd'].includes(mode)) { drive = mode; wheels.forEach(w => w.setAwake(true)); } },
     setPressure(bar) { tires.forEach(t=>t.setPressure(bar)); },
     tune(hz, ratio) { frequency = hz; damping = ratio; body.setAwake(true); },
-    step(throttle = 0, brake = false) {
+    step(throttle = 0, brake = false, nitro = false) {
+      boosting = nitro && !brake && throttle>=0 && nitroCharge>0;
+      if(boosting){
+        throttle=1;
+        nitroCharge=Math.max(0,nitroCharge-STEP/spec.boostDuration);
+      } else if(!nitro){
+        nitroCharge=Math.min(1,nitroCharge+Math.abs(body.getLinearVelocity().x)*STEP/60);
+      }
+      const boost=boosting ? spec.boostFactor : 1;
       accelerator += (Math.abs(throttle) - accelerator) * (1 - Math.exp(-STEP * 6));
       motors.forEach((j, i) => {
         const powered = drive === 'awd' || (drive === 'rwd' ? i === 0 : i === 1);
         const rollingSpeed=Math.abs(body.getLinearVelocity().x)/.48;
-        j.setMotorSpeed(brake ? 0 : -throttle * Math.min(spec.wheelSpeed,rollingSpeed+spec.launch));
-        j.setMaxMotorTorque(brake ? spec.brakeTorque : Math.abs(throttle) > .01 && powered ? spec.torque / (drive === 'awd' ? 2 : 1) : 12);
+        j.setMotorSpeed(brake ? 0 : -throttle * Math.min(spec.wheelSpeed,rollingSpeed+spec.launch*boost));
+        j.setMaxMotorTorque(brake ? spec.brakeTorque : Math.abs(throttle) > .01 && powered ? spec.torque*boost / (drive === 'awd' ? 2 : 1) : 12);
       });
       const h=STEP/substeps;
       for(let i=0;i<substeps;i++){

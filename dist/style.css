@@ -15,13 +15,8 @@
 }
 .part-rack {display:grid;gap:5px;min-width:0}
 .part-card {position:relative;display:flex;align-items:center;gap:9px;min-width:0;padding:6px 8px;border:1px solid #99ad9238;border-radius:5px;background:#101f1e65}
-.part-icon,.slot-tile i {display:block;aspect-ratio:1;background:#efe2c8 url('assets/workshop-parts.png') 0 0 / 300% 200% no-repeat}
+.part-icon,.slot-tile i {display:block;aspect-ratio:1;background-color:#efe2c8;background-repeat:no-repeat}
 .part-icon {width:35px;flex:none;border-radius:4px;box-shadow:0 1px 3px #091b1b55}
-[data-part="1"] {background-position:50% 0!important}
-[data-part="2"] {background-position:100% 0!important}
-[data-part="3"] {background-position:0 100%!important}
-[data-part="4"] {background-position:50% 100%!important}
-[data-part="5"] {background-position:100% 100%!important}
 .part-info {min-width:0;flex:1}
 .part-info>div {display:flex;justify-content:space-between;align-items:baseline;gap:4px}
 .part-info b {font-size:13px}.part-info strong {color:#eac887;font:600 10px/1.2 monospace;white-space:nowrap}
@@ -32,7 +27,7 @@
 .reel-console {min-width:0}.slot-heading,.slot-controls {display:flex;align-items:center;justify-content:space-between;gap:10px}
 .slot-heading {margin:0 1px 9px}.slot-heading h2 {font:italic 600 clamp(21px,2.2vw,34px)/1 Georgia,serif;letter-spacing:-.045em;margin:0}
 #build-level {font:11px monospace;color:#eac887;white-space:nowrap}
-.slot-bank {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;padding:4px;background:#172322;border:1px solid #bea675;border-radius:7px;box-shadow:inset 0 2px 4px #111}
+.slot-bank {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:4px;background:#172322;border:1px solid #bea675;border-radius:7px;box-shadow:inset 0 2px 4px #111}
 .slot-reel {height:clamp(53px,6.4vw,90px);padding:0;overflow:hidden;position:relative;border:0;border-radius:3px;background:#efe2c8;isolation:isolate}
 .slot-reel:disabled {cursor:default;color:inherit}
 .slot-reel::after {content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(0deg,#493d245e,transparent 23%,transparent 77%,#493d2460);border-radius:inherit}
@@ -48,7 +43,7 @@
 .recipes {margin:7px 0 0;color:#bac9bb;font-size:11px}.recipes p {font-size:12px;color:#e4ebdf}
 summary {cursor:pointer}summary:focus-visible {outline:2px solid #ba833b;outline-offset:3px}
 .manual-settings {margin:16px 0}.manual-settings>summary {font-size:14px;font-weight:bold}
-@media(max-width:940px){
+@media(max-width:760px){
   .drive-slot{grid-template-columns:1fr 1fr;gap:10px;padding:13px}
   .reel-console{grid-column:1/-1;grid-row:1}.part-rack{gap:4px}.part-card{padding:4px 6px}
   .slot-reel{height:clamp(48px,10vw,76px)}.part-icon{width:30px}
@@ -59,3 +54,27 @@ summary {cursor:pointer}summary:focus-visible {outline:2px solid #ba833b;outline
   #spin{padding:8px 10px}#spin kbd{display:none}.part-info strong{font-size:9px}
   .slot-heading h2{font-size:22px}.slot-bank{gap:2px;padding:3px}
 }
+
+.slot-machine {display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:clamp(10px,1.5vw,24px)}
+.slot-bank {--cell:clamp(44px,6.6vh,70px);width:calc(3 * var(--cell) + 16px)}
+.slot-reel {height:calc(3 * var(--cell))}
+.slot-tile {height:33.333333%;position:relative;border-bottom:1px solid #9d805557;background:#f4e8cf}
+.slot-tile.pair {box-shadow:inset 3px 0 #b9964a}
+.slot-tile.payline::after {content:'';position:absolute;inset:1px;border:2px solid #bc7e17;pointer-events:none}
+.slot-machine .slot-controls {display:grid;align-content:center;justify-content:stretch;gap:10px;margin:0;min-width:0}
+.spin-receipt {min-height:3.2em;font-size:12px;line-height:1.4;color:#e3e6d4}
+#wallet {display:flex;gap:6px 12px;flex-wrap:wrap;color:#f0d394}
+#wallet span {display:flex;align-items:center;gap:5px;font:600 12px/1.2 monospace}
+#wallet i {width:22px;border-radius:50%}
+#nitro {background:#254750;color:#e2fbf7;width:65px;font:bold 15px monospace;line-height:1.1}
+#nitro b {display:block;font-size:10px;color:#aadcd4}#nitro.active {background:#157c83}
+.tuning-shop {margin:10px 0;color:#29443d;border:1px solid #adbcae;border-radius:9px;background:#e3e9de;overflow:hidden}
+.tuning-shop summary {padding:12px 16px;cursor:pointer;font-weight:bold}
+.tuning-shop summary small {font-size:11px;font-weight:400;margin-left:8px;color:#536859}
+#shop-items {display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:6px;padding:0 12px}
+#shop-items button {display:flex;align-items:center;text-align:left;gap:8px;padding:7px;background:#faf6e7}
+#shop-items button:disabled {background:#e2e6da;cursor:default;color:#546256}
+#shop-items small {display:block;font-size:11px;margin-top:3px}
+#shop-notice {font-size:12px;padding:6px 14px;min-height:20px}
+@media(max-width:760px){.slot-machine{grid-template-columns:auto 1fr}.slot-machine .slot-controls{max-width:320px}.reel-console{max-width:480px;justify-self:center;width:100%}}
+@media(max-width:440px){.slot-bank{--cell:43px}.slot-heading h2{font-size:20px}.spin-receipt{font-size:11px}.slot-machine{gap:9px}.pedals{gap:5px}.pedals button{width:44px}.pedals .brake{width:53px}}
