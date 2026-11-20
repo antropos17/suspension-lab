@@ -15,11 +15,12 @@ export function createShop(root, wallet, buy) {
     button.addEventListener('click',()=>buy(kit?'kit':'part',index,Number(button.dataset.level)));
     return (garage,levels)=>{
       const level=levels[item.part], price=kit? item.price : partPrice(level);
-      const done=kit ? garage.kits[index] : level===THRESHOLDS.length;
-      paintIcon(icon,item.part,kit ? 8 : Math.min(8,level+1));button.dataset.level=level;
-      const suffix=kit ? item.effect : 'Ур. '+level+' → '+(level+1);
-      detail.textContent=done ? (kit ? 'Установлен · '+item.effect : 'Максимальный уровень') : suffix+' · '+(kit?price+' алм.':coinText(price));
-      button.disabled=done || (kit ? garage.gems : garage.coins)<price;
+      const done=kit ? garage.kits[index] : level>=THRESHOLDS.length-1;
+      paintIcon(icon,item.part,kit ? 8 : Math.min(8,level+2));button.dataset.level=level;
+      const pending=kit?garage.kitOrders[index]:garage.orders[index];
+      const suffix=kit ? item.effect+' · нужна тройка «'+PART_NAMES[item.part]+'»' : '+2 уровня за линию';
+      detail.textContent=pending ? 'Заказан · нужна тройка «'+PART_NAMES[item.part]+'»' : done ? (kit ? 'Установлен' : 'Достаточно тройки') : suffix+' · '+(kit?price+' алм.':coinText(price));
+      button.disabled=pending || done || (kit ? garage.gems : garage.coins)<price;
     };
   });
   return garage=>{

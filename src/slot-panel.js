@@ -16,12 +16,30 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
     reel.append(strip);bank.append(reel);
     return {reel,strip,tiles};
   });
+  const overlay=document.createElement('canvas');
+  overlay.className='winning-lines';overlay.width=overlay.height=300;
+  overlay.setAttribute('aria-hidden','true');bank.append(overlay);
+  const marks=overlay.getContext('2d');
   let lastPhase,lastParts,lastHeld,lastLocked,lastLevels,lastTime,lastReceipt;
   return (now,locked)=>{
     const {phase,parts,previous,result}=slot, rolling=phase==='rolling', levels=getLevels();
     const changed=phase!==lastPhase || parts!==lastParts || lastHeld!==slot.held || locked!==lastLocked || levels!==lastLevels;
+    if(changed){
+      marks.clearRect(0,0,300,300);
+      if(!rolling && result){
+        marks.strokeStyle='#b56320';marks.lineWidth=3;marks.lineCap='round';
+        for(const line of result.lines){
+          marks.beginPath();
+          for(const [j,i] of line.entries()){
+            const x=i%3*100+50,y=Math.floor(i/3)*100+50;
+            if(j===0)marks.moveTo(x,y);else marks.lineTo(x,y);
+          }
+          marks.stroke();
+        }
+      }
+    }
     if(changed || rolling){
-      button.disabled=locked || phase!=='ready';
+      button.disabled=locked || rolling;
       columns.forEach(({reel,strip,tiles},col)=>{
         const t=rolling && col!==slot.locked ? Math.min(1,Math.max(0,(now-slot.started)/reelStopTime(col))) : 1;
         const travel=reduced.matches ? (t===1?12:0) : 12*(1-(1-t)**2);
@@ -34,7 +52,6 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
           if(changed){
             tile.dataset.result=row<3&&!rolling ? parts[index] : '';
             tile.classList.toggle('payline',row<3 && !rolling && !!result?.lines.some(line=>line.includes(index)));
-            tile.classList.toggle('pair',row<3 && !rolling && !!result?.winners.includes(parts[index]));
           }
         });
         if(changed){
@@ -45,8 +62,8 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
       });
     }
     if(changed || lastReceipt!==result?.receipt) status.textContent=rolling ? 'Барабаны вращаются…' :
-      result ? result.name+' · +'+coinText(result.coins)+(result.gems?' · +'+result.gems+' алм.':'')+(result.receipt?' · '+result.receipt:'') : 'Пара деталей улучшает узел. Три в линию дают бонус.';
-    const time=phase==='driving' ? Math.ceil(Math.max(0,slot.ends-now)*10)/10 : null;
+      result ? result.name+(result.coins?' · +'+coinText(result.coins):'')+(result.gems?' · +'+result.gems+' алм.':'')+(result.receipt?' · '+result.receipt:'') : 'Три одинаковых на линии — установка детали.';
+    const time=now<slot.autoUntil ? Math.ceil(Math.max(0,slot.autoUntil-now)*10)/10 : null;
     if(time!==lastTime) timer.textContent=time===null ? '' : 'Газ · '+time.toFixed(1)+' с';
     lastTime=time;lastPhase=phase;lastParts=parts;lastHeld=slot.held;lastLocked=locked;lastLevels=levels;lastReceipt=result?.receipt;
   };

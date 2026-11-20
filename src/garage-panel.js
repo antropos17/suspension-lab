@@ -1,4 +1,4 @@
-import { PART_NAMES, THRESHOLDS, levelOf, buildSpec } from './garage.js';
+import { PART_NAMES, THRESHOLDS, levelOf, buildSpec, SPECIALS } from './garage.js';
 import { TIRE_RADIUS } from './vehicle-constants.js';
 
 import { paintIcon } from './part-art.js';
@@ -25,13 +25,16 @@ export function createGaragePanel(left, right, title) {
       spec.smokeFactor.toFixed(2)+'× копоть', spec.boostDuration.toFixed(1)+' с форсажа'];
     title.textContent = 'Сборка ' + levels.reduce((a,b)=>a+b,0) + ' / 64';
     cards.forEach((card,i) => {
-      const lv = levels[i], next = THRESHOLDS[lv], points = garage.points[i];
+      const lv = levels[i], next = THRESHOLDS[lv];
       paintIcon(card.querySelector('i'),i,lv);
       card.querySelector('strong').textContent = 'Ур. '+lv;
-      card.querySelector('small').textContent = specs[i] + ' · ' + (next ? points+'/'+next : 'макс.');
+      const pendingKit=SPECIALS.some((item,k)=>item.part===i && garage.kitOrders[k]);
+      const target=lv+(garage.orders[i]?2:1);
+      const fitting=next ? 'ур. '+target+' за тройку' : 'макс.';
+      card.querySelector('small').textContent=specs[i]+' · '+fitting+(pendingKit?' + спецкомплект':'');
       const bar = card.querySelector('progress');
-      bar.max = next ? next-THRESHOLDS[lv-1] : 1;
-      bar.value = next ? points-THRESHOLDS[lv-1] : 1;
+      bar.max=THRESHOLDS.length;
+      bar.value=lv;
       if (!changes?.[i].gain) return;
       const {gain,from,to} = changes[i];
       const tag = document.createElement('span');
@@ -42,7 +45,7 @@ export function createGaragePanel(left, right, title) {
       const flash = tag.animate([{opacity:1},{opacity:1,offset:.8},{opacity:0}],{duration:2100});
       flash.onfinish = () => tag.remove();
       if (reduced) return;
-      const source = reels?.querySelector('[data-result="'+i+'"]');
+      const source = reels?.querySelector('.payline[data-result="'+i+'"]');
       if (!source) return;
       const start = source.getBoundingClientRect(), end = card.querySelector('i').getBoundingClientRect();
       const chip = document.createElement('i');

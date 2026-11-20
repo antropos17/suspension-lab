@@ -2,40 +2,40 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#243e3b"><title>Suspension Lab — Бакинский гараж</title>
+  <meta name="theme-color" content="#34444f"><title>Suspension Lab — Бакинский гараж</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main>
-    <header><div class="brand"><span class="brand-icon">◉</span><div><h1>Suspension Lab</h1><p>Баку · Прибрежная трасса</p></div></div><div class="header-actions"><button id="pause" aria-keyshortcuts="P">Пауза <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Новый заезд <kbd>R</kbd></button></div></header>
-    <section class="stage" aria-label="Driving game">
-      <canvas id="game" aria-label="Side view of a classic trail sedan with simulated suspension and a layered Baku Bay panorama. Press A to reverse and D to accelerate, or use the buttons below."></canvas>
-      <div class="hud"><div><strong id="speed">0</strong><span>км/ч</span></div><div class="route"><span id="distance">0 / 260 м</span><progress id="progress" max="260" value="0" aria-label="Track progress"></progress><span id="acceleration">0.0 м/с²</span></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
+    <header><div class="brand"><div><h1>Бакинский гараж</h1><p>Прибрежная трасса · 800 м</p></div></div><div class="header-actions"><button id="pause" aria-keyshortcuts="P">Пауза <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Новый заезд <kbd>R</kbd></button></div></header>
+    <section class="stage" aria-label="Заезд по Баку">
+      <canvas id="game" aria-label="Седан на прибрежной трассе в Баку. D — газ, A — задний ход, пробел — тормоз."></canvas>
+      <div class="hud"><div><strong id="speed">0</strong><span>км/ч</span></div><div class="route"><span id="distance">0 / 800 м</span><progress id="progress" max="800" value="0" aria-label="Пройденная дистанция"></progress><span id="acceleration">0.0 м/с²</span></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
       <div id="notice" class="notice" role="status">До брусчатки 55 м</div>
-      <div class="terrain-label">Bakı coastline <span id="route-award" role="status"></span></div>
+      <div class="terrain-label">Bakı bulvarı</div>
       <div id="overlay" class="overlay" hidden><div><p id="overlay-caption">Take a breath.</p><h2 id="overlay-title">Paused</h2><button id="resume">Keep driving</button></div></div>
-      <div class="pedals"><button id="nitro" data-control="nitro" aria-label="Нитро, удерживать N" aria-keyshortcuts="N">N₂O <b id="nitro-charge">100%</b></button><button data-control="reverse" aria-label="Reverse">◀</button><button data-control="brake" class="brake" aria-label="Brake">Тормоз</button><button data-control="forward" aria-label="Accelerate">▶</button></div>
+      <div class="pedals"><button id="nitro" data-control="nitro" aria-label="Нитро, удерживать N" aria-keyshortcuts="N">N₂O <b id="nitro-charge">100%</b></button><button data-control="reverse" aria-label="Назад">◀</button><button data-control="brake" class="brake" aria-label="Тормоз">Тормоз</button><button data-control="forward" aria-label="Газ">▶</button></div>
     </section>
     <section class="drive-slot" aria-labelledby="slot-title" lang="ru">
       <div class="part-rack" id="rack-left" aria-label="Силовая установка и колёса"></div>
       <div class="reel-console">
-        <div class="slot-heading"><h2 id="slot-title">Гараж на колёсах</h2><span id="build-level"></span></div>
+        <div class="slot-heading"><h2 id="slot-title">Барабаны мастерской</h2><span id="build-level"></span></div>
         <div class="slot-machine"><div class="slot-bank" id="slot-bank" role="group" aria-label="Три барабана по три символа"></div>
         <div class="slot-controls"><div id="wallet" aria-label="Кошелёк"></div>
           <button id="spin" aria-keyshortcuts="S" disabled>Крутить и ехать <kbd>S</kbd></button>
-          <div class="spin-receipt"><span id="slot-status" role="status">Пара деталей улучшает узел.</span> <span id="slot-time"></span></div>
+          <div class="spin-receipt"><span id="slot-status" role="status">Три одинаковых на линии — установка детали.</span> <span id="slot-time"></span></div>
         </div></div>
-        <details class="recipes"><summary>Комбинации и фиксация барабана</summary>
-          <p>Две одинаковые детали в любом месте дают 2 очка узлу, три — 6, четыре — 12. Три одинаковых символа по горизонтали, вертикали или диагонали дают ещё 4 очка детали, 30 монет или 3 алмаза.</p>
-          <p>Каждая прокрутка приносит 4 монеты. Знак монет добавляет 10 монет, алмаз — 1 алмаз. Пары двигателя и коробки, колёс и подвески, колёс и тормозов, выхлопа и нитро дают по дополнительному очку обоим узлам.</p>
-          <p>Нажми барабан после остановки, чтобы зафиксировать весь столбец на следующую прокрутку. Отметки 55, 120 и 260 м при первом проезде дают детали, монеты и алмазы. Удерживай N для нитро. На ходу заряд восстанавливается.</p>
+        <details class="recipes"><summary>Выигрышные линии</summary>
+          <p>Три одинаковые детали на трёх барабанах поднимают свой узел на уровень. Играют три горизонтали и две диагонали. Каждая собранная линия считается отдельно.</p>
+          <p>Три монеты приносят 30 монет, три алмаза — 3 алмаза. Нажми остановившийся барабан, чтобы удержать его на один ход. Крутить можно и на ходу.</p>
         </details>
       </div>
       <div class="part-rack" id="rack-right" aria-label="Подвеска, тормоза и кузов"></div>
-    </section>
-    <details class="tuning-shop"><summary>Магазин тюнинга <small>Детали и спецкомплекты</small></summary>
+      <details class="tuning-shop"><summary>Заказы мастерской</summary>
+      <p>За монеты закажи двойное улучшение, за алмазы — спецкомплект. Заказ установится, когда выпадет линия его детали.</p>
       <div id="shop-items"></div><div id="shop-notice" role="status"></div>
-    </details>
+      </details>
+    </section>
     <details class="manual-settings"><summary>Настройки шасси и привода</summary>
     <section class="workbench" aria-label="Suspension settings">
       <div class="intro"><h2>Настройка шасси</h2><p>Давление и демпфирование можно менять на ходу.</p><button id="xray" aria-pressed="false">Показать шасси</button><div class="soot-control"><label for="soot">Копоть <output id="soot-value">3.0x</output></label><input id="soot" type="range" min="0" max="6" step="0.1" value="3"><div class="range-labels"><span>Нет</span><span>Много</span></div></div></div>

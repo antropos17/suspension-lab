@@ -61,10 +61,10 @@ export function drawClassicBody(c, xray, soot, levels, kits) {
   const rect=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
   const paint=c.createLinearGradient(0,-.4,0,1.1);
   const colors = bodyLevel < 3 ? ['#484638','#7b7968','#a29b83','#b6b09b','#827e6a'] :
-    bodyLevel >= 8 ? ['#132334','#203042','#244661','#3b6977','#bd985e'] :
+    bodyLevel >= 8 ? ['#192733','#293b4b','#3a5264','#647b83','#414e57'] :
     bodyLevel === 7 ? ['#312733','#4a364c','#68465d','#a17474','#523c54'] :
     bodyLevel === 6 ? ['#353c40','#526269','#75888a','#b5c4bc','#69797a'] :
-    bodyLevel >= 4 ? ['#173c3f','#265a5c','#36797a','#66a3a0','#326768'] :
+    bodyLevel >= 4 ? ['#253942','#354e5c','#506d7d','#85a0aa','#425d69'] :
     ['#38252b','#6e2730','#993e44','#c16b69','#783239'];
   [0,.25,.55,.7,1].forEach((stop,i)=>paint.addColorStop(stop,colors[i]));
   const chrome=c.createLinearGradient(0,-.32,0,-.12);
@@ -74,6 +74,12 @@ export function drawClassicBody(c, xray, soot, levels, kits) {
   c.save();bodyPath(c);c.clip();
   if(bodyLevel < 3){
     poly([[-1.04,.4],[-.19,.42],[-.19,-.27],[-.65,-.27],[-.71,-.01]],bodyLevel===1?'#8b907f':'#929897');
+  }
+  if(bodyLevel===1){
+    poly([[1.02,.41],[1.97,.35],[2.06,.27],[1.73,.23],[1.46,.28],[1.18,.25]],'#876953');
+    line([[1.07,.38],[1.36,.33],[1.51,.35],[1.84,.31]],'#544b42',.022);
+    poly([[-.6,-.16],[-.18,-.14],[-.18,-.25],[-.59,-.25]],'#655b4f');
+    for(const x of [-.56,-.22])dot(x,-.19,.018,'#9c9b8d');
   }
   // Roof and gutters, with real pillar widths around the glass.
   poly([[-1.07,.57],[-.8,1.02],[-.63,1.09],[.43,1.09],[.61,1],[.94,.57]],'#dbd9cc');
@@ -156,6 +162,12 @@ export function drawClassicBody(c, xray, soot, levels, kits) {
       c.strokeStyle=bodyLevel>=7?'#283539':'#526264';c.lineWidth=.065;c.stroke();
       for(let i=1;i<=7;i++){const a=i*Math.PI/8;dot(x+(ARCH_X+.054)*Math.cos(a),ARCH_Y+(ARCH_Y_RADIUS+.052)*Math.sin(a),.012,'#c6c5b2');}
     }
+  }
+  if(bodyLevel>=7){
+    dot(.21,.12,.19,'#e8e4d8');
+    c.save();c.translate(.21,.12);c.scale(1,-1);
+    c.font='bold .21px Bahnschrift, sans-serif';c.textAlign='center';c.textBaseline='middle';
+    c.fillStyle='#283842';c.fillText('07',0,.012);c.restore();
   }
   const stain=c.createRadialGradient(-2,-.21,0,-2,-.21,.27);
   stain.addColorStop(0,`rgba(15,18,19,${.15+soot*.6})`);stain.addColorStop(1,'rgba(15,18,19,0)');

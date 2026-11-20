@@ -1,3 +1,4 @@
+import { FINISH } from './vehicle-constants.js';
 // Original AI-generated architectural composite, not a geographic photograph.
 // Source research, prompt and limits are in docs/BAKU-BACKGROUND.md.
 const rect=(c,x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
@@ -11,7 +12,9 @@ export function createBakuBackdrop(invalidate=()=>{}){
   const unit=Math.max(.65,Math.min(1.3,height/440));
   const lift=Math.max(-12,Math.min(12,(camera.y-1.1)*scale*.025));
   const horizon=.66+Math.max(0,Math.min(.06,(width/height-2)*.06));
-  const base=height*horizon-lift;
+  const panoramaWidth=Math.max(width*1.08,height*1.56);
+  const panoramaHeight=panorama.naturalWidth?panoramaWidth*panorama.naturalHeight/panorama.naturalWidth:height;
+  const base=Math.max(height*horizon,panoramaHeight*.77)-lift;
   if(cachedWidth!==width||cachedHeight!==height){
    cachedWidth=width;cachedHeight=height;wash.width=Math.ceil(width);wash.height=Math.ceil(height);
    const w=wash.getContext('2d');
@@ -20,21 +23,14 @@ export function createBakuBackdrop(invalidate=()=>{}){
   }
   c.drawImage(wash,0,0,width,height);
   if(panorama.complete&&panorama.naturalWidth){
-   const h=Math.min(Math.max(width*1.08,height*1.5)*panorama.naturalHeight/panorama.naturalWidth,height*.90);
-   const w=h*panorama.naturalWidth/panorama.naturalHeight,top=base-h*.826;
-   const initial=Math.max(0,(w-width)*.25),offset=initial+(camera.x-3)*scale*.006,first=Math.floor(offset/w);
-   // Mirroring keeps shared tile edges continuous. Only one edge enters on this track.
-   for(let i=first;i*w-offset<width;i++){
-    const x=i*w-offset;c.save();c.translate(x+(Math.abs(i)%2?w:0),0);if(Math.abs(i)%2)c.scale(-1,1);
-    if(top>0){
-     // Extend only the clear top 64 pixels of sky. At the join both strips
-     // sample the same source row, so the photograph has no rectangular edge.
-     const skyH=64/panorama.naturalHeight*h;
-     c.drawImage(panorama,0,0,panorama.naturalWidth,64,0,0,w,top+skyH);
-     c.drawImage(panorama,0,64,panorama.naturalWidth,panorama.naturalHeight-64,0,top+skyH,w,h-skyH);
-    }else c.drawImage(panorama,0,top,w,h);
-    c.restore();
-   }
+   const w=panoramaWidth,h=panoramaHeight;
+   const top=base-h*.826,span=w-width;
+   const offset=span*(.18+.76*Math.min(1,Math.max(0,(camera.x-3)/FINISH)));
+   if(top>0){
+    const skyH=64/panorama.naturalHeight*h;
+    c.drawImage(panorama,0,0,panorama.naturalWidth,64,-offset,0,w,top+skyH);
+    c.drawImage(panorama,0,64,panorama.naturalWidth,panorama.naturalHeight-64,-offset,top+skyH,w,h-skyH);
+   }else c.drawImage(panorama,-offset,top,w,h);
   }
   const walk=base+48*unit;
   rect(c,0,walk,width,9*unit,'#b4a58b');line(c,[[0,walk],[width,walk]],'#e2d8c3',2*unit);

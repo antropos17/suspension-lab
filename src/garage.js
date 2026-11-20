@@ -1,3 +1,4 @@
+import { FINISH } from './vehicle-constants.js';
 export const PART_NAMES = ['Двигатель', 'Коробка', 'Колёса', 'Подвеска', 'Тормоза', 'Кузов', 'Выхлоп', 'Нитро'];
 export const SYMBOLS = [...PART_NAMES, 'Монеты', 'Алмазы'];
 export const THRESHOLDS = [0, 2, 6, 12, 20, 32, 49, 72];
@@ -5,11 +6,6 @@ export const SPECIALS = [
   {name:'Компрессор', part:0, price:5, effect:'+18% момента на колёсах'},
   {name:'Двойной баллон', part:7, price:4, effect:'+60% времени нитро'},
   {name:'Карбоновый обвес', part:5, price:3, effect:'Карбоновые пороги и антикрыло с уровня кузова 4'}
-];
-export const CHECKPOINTS = [
-  {meters:55, title:'Брусчатка', gains:[0,0,1,1,0,0,0,0],coins:15,gems:1},
-  {meters:120, title:'Подъём', gains:[1,1,0,0,0,0,1,0],coins:25,gems:1},
-  {meters:260, title:'Финиш', gains:Array(8).fill(2),coins:40,gems:3}
 ];
 export const levelOf = points => THRESHOLDS.filter(value => points >= value).length;
 const bounded = (n, max) => Number.isFinite(n) ? Math.min(max, Math.max(0, Math.floor(n))) : 0;
@@ -19,9 +15,11 @@ export function readGarage(raw) {
   try { data = JSON.parse(raw); } catch {}
   return {
     points: PART_NAMES.map((_, i) => bounded(data?.points?.[i], THRESHOLDS.at(-1))),
-    best: bounded(data?.best, 260),
+    best: bounded(data?.best, FINISH),
     coins: bounded(data?.coins, Number.MAX_SAFE_INTEGER),
     gems: bounded(data?.gems, Number.MAX_SAFE_INTEGER),
+    orders: PART_NAMES.map((_,i)=>data?.orders?.[i] === true),
+    kitOrders: SPECIALS.map((_,i)=>data?.kitOrders?.[i] === true),
     kits: SPECIALS.map((_,i)=>data?.kits?.[i] === true)
   };
 }
@@ -35,13 +33,23 @@ export function fitParts(garage, gains) {
 }
 
 export function advanceGarage(garage, meters, reward) {
-  const crossed = CHECKPOINTS.filter(c=>garage.best<c.meters && meters>=c.meters);
-  const gains = reward ? [...reward.gains] : Array(PART_NAMES.length).fill(0);
-  for(const c of crossed) c.gains.forEach((n,i)=>gains[i]+=n);
-  garage.best = Math.max(garage.best,meters);
-  garage.coins += (reward?.coins ?? 0) + crossed.reduce((n,c)=>n+c.coins,0);
-  garage.gems += (reward?.gems ?? 0) + crossed.reduce((n,c)=>n+c.gems,0);
-  return {changes:fitParts(garage,gains), crossed};
+  garage.best=Math.max(garage.best,bounded(meters,FINISH));
+  if(!reward) return {};
+  const gains=reward.matches.map((lines,i)=>{
+    if(!lines) return 0;
+    const steps=lines+(garage.orders[i]?1:0);
+    garage.orders[i]=false;
+    const target=Math.min(THRESHOLDS.length,levelOf(garage.points[i])+steps);
+    return THRESHOLDS[target-1]-garage.points[i];
+  });
+  const installed=[];
+  SPECIALS.forEach((kit,i)=>{
+    if(garage.kitOrders[i] && reward.matches[kit.part]){
+      garage.kitOrders[i]=false;garage.kits[i]=true;installed.push(kit.name);
+    }
+  });
+  garage.coins+=reward.coins;garage.gems+=reward.gems;
+  return {changes:fitParts(garage,gains),installed};
 }
 
 const coinForms=['монета','монеты','монет'];
@@ -53,26 +61,25 @@ export function coinText(amount) {
 export const partPrice = level => 18 + 12*level;
 export function purchase(garage, kind, index) {
   if (!Number.isInteger(index) || index<0) return null;
-  const gains = Array(PART_NAMES.length).fill(0);
   if (kind==='part' && index<PART_NAMES.length) {
-    const level=levelOf(garage.points[index]), target=THRESHOLDS[level], price=partPrice(level);
-    if(target===undefined || garage.coins<price) return null;
-    garage.coins-=price;
-    gains[index]=target-garage.points[index];
+    const level=levelOf(garage.points[index]), price=partPrice(level);
+    if(level>=THRESHOLDS.length-1 || garage.orders[index] || garage.coins<price) return false;
+    garage.coins-=price;garage.orders[index]=true;
   } else if(kind==='kit' && index<SPECIALS.length) {
     const item=SPECIALS[index];
-    if(garage.kits[index] || garage.gems<item.price) return null;
-    garage.gems-=item.price; garage.kits[index]=true;
-  } else return null;
-  return fitParts(garage,gains);
+    if(garage.kits[index] || garage.kitOrders[index] || garage.gems<item.price) return false;
+    garage.gems-=item.price;garage.kitOrders[index]=true;
+  } else return false;
+  return true;
 }
 
-export function buildSpec([engine, transmission, wheels, suspension, brakes, , exhaust=1, nitro=1], kits=[]) {
+export function buildSpec([engine, transmission, wheels, suspension, brakes, body=1, exhaust=1, nitro=1], kits=[]) {
   return {
-    torque: (900 + 360 * (engine-1)) * (kits[0] ? 1.18 : 1),
-    launch: 2.6 + .65 * (engine-1),
-    wheelSpeed: 15 + 2.5 * (transmission-1),
-    friction: 1.05 + .15 * (wheels-1),
+    torque: (1850 + 340 * (engine-1)) * (kits[0] ? 1.18 : 1),
+    aero: Math.max(0,body-4)/4,
+    launch: 4.3 + .54 * (engine-1),
+    wheelSpeed: 22 + 1.7 * (transmission-1),
+    friction: 1.28 + .11 * (wheels-1),
     damperLimit: 2300 + 230 * (suspension-1),
     brakeTorque: 650 + 240 * (brakes-1),
     boostDuration: (1.6+.32*(nitro-1))*(kits[1] ? 1.6 : 1),

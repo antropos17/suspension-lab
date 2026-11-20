@@ -2,53 +2,46 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDriveSlot, scoreParts } from '../src/drive-slot.js';
 import { createSimulation, STEP } from '../src/physics.js';
-import { readGarage, fitParts, levelOf, advanceGarage, purchase } from '../src/garage.js';
+import { readGarage, levelOf, advanceGarage, purchase } from '../src/garage.js';
 
-test('3x3 recognises all eight paylines, scatter rewards and mechanical synergies',()=>{
-  const square=scoreParts(Array(9).fill(0));
-  assert.equal(square.lines.length,8);assert.equal(square.seconds,9.5);
-  const cross=scoreParts([8,0,9,0,8,9,1,2,8]);
-  assert.deepEqual(cross.lines,[[0,4,8]]);
-  assert.equal(cross.coins,64);assert.equal(cross.gems,2);
-  const parts=scoreParts([0,1,0,1,0,5,6,7,6]);
-  assert.equal(parts.gains[0],7);assert.equal(parts.gains[1],3);
-  assert.equal(scoreParts([0,1,2,3,4,5,6,7,8]).seconds,2);
+test('only three across distinct reels score; each legal line pays once',()=>{
+  const miss=scoreParts([0,1,0,0,8,9,0,9,8]);
+  assert.deepEqual(miss.lines,[]);assert.deepEqual(miss.matches,Array(8).fill(0));
+  assert.equal(miss.coins+miss.gems,0);
+  const cross=scoreParts([8,0,9,2,8,1,4,2,8]);
+  assert.deepEqual(cross.lines,[[0,4,8]]);assert.equal(cross.coins,30);
+  assert.equal(scoreParts(Array(9).fill(9)).gems,15);
+  assert.equal(scoreParts(Array(9).fill(2)).matches[2],5);
 });
 
-test('a hold keeps all three cells in one column, and rolls settle exactly once',()=>{
-  let choice=0;
-  const slot=createDriveSlot(()=>choice);
-  slot.spin(0);assert.equal(slot.spin(.3),false);slot.update(.5,true);
-  assert.equal(slot.update(2,false).count,9);assert.equal(slot.phase,'ready');
-  assert.equal(slot.update(3,false),undefined);
-  slot.hold(1);choice=.99;slot.spin(4);
-  assert.deepEqual(slot.parts,[9,0,9,9,0,9,9,0,9]);
-  slot.reset();assert.equal(slot.update(9,false),undefined);
+test('a held column keeps its three physical stops on the next spin',()=>{
+  let seed=3;const slot=createDriveSlot(()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/2**32));
+  slot.spin(0);slot.update(2,false);slot.hold(1);const previous=[...slot.parts];
+  assert.ok(slot.spin(2.1));assert.ok(slot.autoUntil>2.1);
+  for(const i of [1,4,7])assert.equal(slot.parts[i],previous[i]);
+  assert.equal(slot.spin(2.2),false);slot.update(4,true);assert.equal(slot.update(5,true),undefined);
 });
 
-test('migration keeps old levels and records; wallet purchases have exact prices and bounded permanent effects',()=>{
-  const g=readGarage(JSON.stringify({points:[20,12,6,2,0,20],best:84}));
-  assert.deepEqual(g.points.map(levelOf),[5,4,3,2,1,5,1,1]);assert.equal(g.best,84);
-  assert.equal(purchase(g,'part',0),null);assert.equal(purchase(g,'kit',0),null);
-  g.coins=30;g.gems=4;
-  assert.equal(purchase(g,'part',6)[6].to,2);assert.equal(g.coins,0);
-  assert.ok(purchase(g,'kit',1));assert.equal(g.gems,0);assert.equal(g.kits[1],true);
-  g.gems=10;assert.equal(purchase(g,'kit',1),null);assert.equal(g.gems,10);
-  assert.deepEqual(readGarage(JSON.stringify(g)),g);
-  fitParts(g,Array(8).fill(100));g.coins=500;
-  assert.equal(purchase(g,'part',5),null);assert.equal(g.coins,500);
+test('orders spend currency but fit only when the ordered part wins a line',()=>{
+  const g=readGarage(JSON.stringify({points:[20,12,6,2,0,20],best:84,coins:30,gems:4}));
+  assert.deepEqual(g.points.map(levelOf),[5,4,3,2,1,5,1,1]);
+  assert.ok(purchase(g,'part',7));assert.ok(purchase(g,'kit',1));
+  assert.equal(levelOf(g.points[7]),1);assert.equal(g.kits[1],false);
+  assert.equal(g.coins+g.gems,0);assert.equal(purchase(g,'kit',1),false);
+  const restored=readGarage(JSON.stringify(g));
+  advanceGarage(restored,800,scoreParts([0,0,0,2,7,1,7,3,8]));
+  assert.equal(levelOf(restored.points[0]),6);
+  assert.equal(levelOf(restored.points[7]),1);assert.equal(restored.kits[1],false);
+  advanceGarage(restored,800,scoreParts([7,7,7,2,3,1,0,4,8]));
+  assert.equal(levelOf(restored.points[7]),3);assert.ok(restored.kits[1]);assert.equal(restored.orders[7],false);
 });
 
-test('checkpoint and spin currencies stack once and survive reloading',()=>{
+test('driving the entire course changes only the distance record',()=>{
   const g=readGarage(null);
-  advanceGarage(g,55,scoreParts([0,0,1,2,3,4,5,8,9]));
-  assert.deepEqual(g.points,[2,0,1,1,0,0,0,0]);assert.equal(g.coins,29);assert.equal(g.gems,2);
-  const restored=readGarage(JSON.stringify(g));advanceGarage(restored,55);
-  assert.deepEqual(restored,g);
-  advanceGarage(restored,260);
-  assert.deepEqual(restored.points,[5,3,3,3,2,2,3,2]);
+  for(const distance of [55,120,260,800])advanceGarage(g,distance);
+  assert.deepEqual(g,{...readGarage(null),best:800});
+  assert.deepEqual(readGarage(JSON.stringify(g)),g);
 });
-
 test('nitro boosts wheel motors, depletes, brakes take priority, and distance refills the tank',()=>{
   const runs=[false,true].map(nitro=>{
     const s=createSimulation({levels:Array(8).fill(1),heightAt:()=>0});
@@ -95,8 +88,7 @@ test('a spin resolves once on game time, ignores repeat presses and yields to ma
   assert.equal(slot.phase, 'rolling');
   slot.update(12, false);
   assert.equal(slot.phase, 'driving');
-  assert.deepEqual(slot.parts, Array(9).fill(9));
-  assert.equal(slot.spin(12), false);
+  assert.equal(slot.parts.length,9);
   slot.update(12, true);
   assert.equal(slot.phase, 'ready');
   assert.ok(slot.spin(13));
@@ -107,18 +99,17 @@ test('a spin resolves once on game time, ignores repeat presses and yields to ma
 
 test('the shortest combination drives each transmission through ground contacts and expires', () => {
   for (const drive of ['fwd','rwd','awd']) {
-    let index = 0;
-    const slot = createDriveSlot(() => (index++ + .5) / 10);
+    const slot = createDriveSlot(() => 0);
     const sim = createSimulation({ drive, levels:Array(6).fill(1) });
     slot.spin(0);
     let poweredSteps = 0;
-    for (let i=0; i<5/STEP; i++) {
+    for (let i=0; i<12/STEP; i++) {
       slot.update(sim.elapsed, false);
       const power = Number(slot.phase === 'driving');
       poweredSteps += power;
       sim.step(power, false);
     }
-    assert.ok(Math.abs(poweredSteps * STEP - 2) <= STEP);
+    assert.ok(Math.abs(poweredSteps * STEP - slot.result.seconds) <= STEP);
     assert.equal(slot.phase, 'ready');
     assert.ok(sim.body.getPosition().x > 8, drive);
   }
