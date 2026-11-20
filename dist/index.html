@@ -1,36 +1,45 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#243e3b"><title>Suspension Lab — Little wheels. Real physics.</title>
+  <meta name="theme-color" content="#243e3b"><title>Suspension Lab — Бакинский гараж</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main>
-    <header><div class="brand"><span class="brand-icon">◉</span><div><h1>Suspension Lab</h1><p>Little wheels. Real physics.</p></div></div><div class="header-actions"><button id="pause" aria-keyshortcuts="P">Pause <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Restart <kbd>R</kbd></button></div></header>
+    <header><div class="brand"><span class="brand-icon">◉</span><div><h1>Suspension Lab</h1><p>Баку · Прибрежная трасса</p></div></div><div class="header-actions"><button id="pause" aria-keyshortcuts="P">Пауза <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Новый заезд <kbd>R</kbd></button></div></header>
     <section class="stage" aria-label="Driving game">
       <canvas id="game" aria-label="Side view of a classic trail sedan with simulated suspension and a layered Baku Bay panorama. Press A to reverse and D to accelerate, or use the buttons below."></canvas>
-      <div class="hud"><div><strong id="speed">0</strong><span>km/h</span></div><div class="route"><span id="distance">0 / 260 m</span><progress id="progress" max="260" value="0" aria-label="Track progress"></progress></div><div class="timer"><span id="time">0:00.0</span><small>Trail time</small></div></div>
-      <div id="notice" class="notice" role="status">Above the Caspian. Into the city of winds.</div>
-      <div class="terrain-label">Bakı coastline <span>260 m</span></div>
+      <div class="hud"><div><strong id="speed">0</strong><span>км/ч</span></div><div class="route"><span id="distance">0 / 260 м</span><progress id="progress" max="260" value="0" aria-label="Track progress"></progress><span id="acceleration">0.0 м/с²</span></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
+      <div id="notice" class="notice" role="status">До брусчатки 55 м</div>
+      <div class="terrain-label">Bakı coastline <span id="route-award" role="status"></span></div>
       <div id="overlay" class="overlay" hidden><div><p id="overlay-caption">Take a breath.</p><h2 id="overlay-title">Paused</h2><button id="resume">Keep driving</button></div></div>
-      <div class="pedals"><button data-control="reverse" aria-label="Reverse">◀</button><button data-control="brake" class="brake" aria-label="Brake">Brake</button><button data-control="forward" aria-label="Accelerate">▶</button></div>
+      <div class="pedals"><button data-control="reverse" aria-label="Reverse">◀</button><button data-control="brake" class="brake" aria-label="Brake">Тормоз</button><button data-control="forward" aria-label="Accelerate">▶</button></div>
     </section>
-    <section class="drive-slot" aria-labelledby="slot-title">
-      <div class="slot-heading"><h2 id="slot-title">Ignition reels</h2>
-        <p>Spin for 2 seconds of throttle. Each extra matching part adds 1.5 seconds.</p></div>
-      <div class="slot-bank" id="slot-bank" role="group" aria-label="Six ignition reels"></div>
-      <div class="slot-controls">
-        <button id="spin" aria-keyshortcuts="S" disabled>Spin to drive <kbd>S</kbd></button>
-        <span id="slot-status" role="status">Ready to spin</span><span id="slot-time" aria-hidden="true"></span>
+    <section class="drive-slot" aria-labelledby="slot-title" lang="ru">
+      <div class="part-rack" id="rack-left" aria-label="Силовая установка и колёса"></div>
+      <div class="reel-console">
+        <div class="slot-heading"><h2 id="slot-title">Гараж на колёсах</h2><span id="build-level"></span></div>
+        <div class="slot-bank" id="slot-bank" role="group" aria-label="Шесть барабанов"></div>
+        <div class="slot-controls"><button id="spin" aria-keyshortcuts="S" disabled>Крутить и ехать <kbd>S</kbd></button>
+          <div><span id="slot-status" role="status">Собери пару, чтобы улучшить деталь</span><span id="slot-time" aria-hidden="true"></span></div>
+        </div>
+        <details class="recipes"><summary>Комбинации и фиксация барабана</summary>
+          <p>Две одинаковые детали дают узлу 2 очка, тройка — 6, каре — 12. Несколько групп улучшаются вместе. Шесть разных деталей дают по очку всем узлам.</p>
+          <p>Пары мотора и коробки, колёс и подвески или колёс и тормозов дают обоим узлам ещё по очку. После прокрутки нажми один барабан, чтобы оставить его символ на следующий ход.</p>
+          <p>Первый проезд 55 м приносит очки колёсам и подвеске, 120 м — двигателю и коробке. На 260 м все узлы получают по два очка.</p>
+        </details>
       </div>
+      <div class="part-rack" id="rack-right" aria-label="Подвеска, тормоза и кузов"></div>
     </section>
+    <details class="manual-settings"><summary>Настройки шасси и привода</summary>
     <section class="workbench" aria-label="Suspension settings">
-      <div class="intro"><h2>Feel every bump.</h2><p>Two independent springs.<br>One old-school trail sedan.</p><button id="xray" aria-pressed="false">Show chassis</button><div class="soot-control"><label for="soot">Exhaust soot <output id="soot-value">3.0x</output></label><input id="soot" type="range" min="0" max="6" step="0.1" value="3"><div class="range-labels"><span>Off</span><span>Heavy</span></div></div></div>
-      <div class="tuning"><label for="spring">Spring stiffness <output id="spring-value">1.7 Hz</output></label><input id="spring" type="range" min="1.1" max="4" value="1.7" step="0.1"><div class="range-labels"><span>Soft</span><span>Firm</span></div><label for="damping">Shock damping <output id="damping-value">0.50</output></label><input id="damping" type="range" min="0.1" max="1.2" value="0.50" step="0.05"><div class="range-labels"><span>Bouncy</span><span>Planted</span></div><label for="pressure">Tire pressure <output id="pressure-value">2.2 bar</output></label><input id="pressure" type="range" min="0.6" max="3.2" value="2.2" step="0.1"><div class="range-labels"><span>Soft · cold inflation</span><span>Firm</span></div><small id="pressure-live">Rear 2.20 / Front 2.20 bar</small></div>
-      <div class="setup"><span>Drive</span><div class="drive-options" role="group" aria-label="Drive type"><button data-drive="fwd" aria-pressed="false">Front</button><button data-drive="rwd" aria-pressed="false">Rear</button><button data-drive="awd" class="selected" aria-pressed="true">All wheels</button></div><span>Quick setup</span><div class="presets"><button data-preset="comfort">Comfort</button><button data-preset="trail" class="selected">Trail</button><button data-preset="sport">Sport</button></div><div class="suspension-readout"><span>Rear <meter id="rear" min="-0.6" max="0.6" value="0" aria-label="Rear suspension travel"></meter></span><span>Front <meter id="front" min="-0.6" max="0.6" value="0" aria-label="Front suspension travel"></meter></span></div><p>Change the setup while you drive.</p></div>
+      <div class="intro"><h2>Настройка шасси</h2><p>Давление и демпфирование можно менять на ходу.</p><button id="xray" aria-pressed="false">Показать шасси</button><div class="soot-control"><label for="soot">Копоть <output id="soot-value">3.0x</output></label><input id="soot" type="range" min="0" max="6" step="0.1" value="3"><div class="range-labels"><span>Нет</span><span>Много</span></div></div></div>
+      <div class="tuning"><label for="spring">Жёсткость пружин <output id="spring-value">1.7 Hz</output></label><input id="spring" type="range" min="1.1" max="4" value="1.7" step="0.1"><div class="range-labels"><span>Мягче</span><span>Жёстче</span></div><label for="damping">Демпфирование <output id="damping-value">0.50</output></label><input id="damping" type="range" min="0.1" max="1.2" value="0.50" step="0.05"><div class="range-labels"><span>Свободнее</span><span>Плотнее</span></div><label for="pressure">Давление шин <output id="pressure-value">2.2 bar</output></label><input id="pressure" type="range" min="0.6" max="3.2" value="2.2" step="0.1"><div class="range-labels"><span>Холодная шина</span><span>Жёстче</span></div><small id="pressure-live">Rear 2.20 / Front 2.20 bar</small></div>
+      <div class="setup"><span>Привод</span><div class="drive-options" role="group" aria-label="Drive type"><button data-drive="fwd" aria-pressed="false">Передний</button><button data-drive="rwd" aria-pressed="false">Задний</button><button data-drive="awd" class="selected" aria-pressed="true">Полный</button></div><span>Настройки</span><div class="presets"><button data-preset="comfort">Комфорт</button><button data-preset="trail" class="selected">Трасса</button><button data-preset="sport">Спорт</button></div><div class="suspension-readout"><span>Rear <meter id="rear" min="-0.6" max="0.6" value="0" aria-label="Rear suspension travel"></meter></span><span>Front <meter id="front" min="-0.6" max="0.6" value="0" aria-label="Front suspension travel"></meter></span></div></div>
     </section>
-    <footer><span><kbd>A</kbd> Reverse <i></i><kbd>D</kbd> Accelerate <i></i><kbd>Space</kbd> Brake <i></i><kbd>R</kbd> Restart</span><span>Made for the bumps along the way.</span></footer>
+    </details>
+    <footer><span><kbd>S</kbd> Прокрутка <i></i><kbd>A</kbd> Назад <i></i><kbd>D</kbd> Газ <i></i><kbd>Space</kbd> Тормоз <i></i><kbd>R</kbd> Новый заезд</span></footer>
   </main>
   <script src="game.js"></script>
 </body></html>

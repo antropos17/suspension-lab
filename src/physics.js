@@ -3,12 +3,13 @@ import { terrainHeight, GROUND_START, GROUND_STEP, GROUND_COUNT } from './terrai
 import { archPoint } from './vehicle-geometry.js';
 import { createPneumaticTire, RIM_RADIUS } from './pneumatic-tire.js';
 import { createExhaustMount } from './exhaust-mount.js';
+import { buildSpec } from './garage.js';
 export { terrainHeight } from './terrain.js';
 
 import { STEP } from './vehicle-constants.js';
 export { FINISH, STEP } from './vehicle-constants.js';
 
-export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd', pressure = 2.2, nodeCount = 32, substeps = 8, heightAt = terrainHeight } = {}) {
+export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd', pressure = 2.2, nodeCount = 32, substeps = 8, heightAt = terrainHeight, levels } = {}) {
   substeps=Math.max(substeps,Math.ceil(nodeCount/32)*8);
   const world = new World(Vec2(0, -9.81));
   const ground = world.createBody();
@@ -53,6 +54,18 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   const joints = stops;
   const motors = wheels.map((w,i)=>world.createJoint(new RevoluteJoint({enableMotor:true,maxMotorTorque:0},rims[i],w,w.getPosition())));
   const tires = wheels.map(w=>createPneumaticTire(world,w,{pressure,count:nodeCount}));
+  let spec = {torque:2400,launch:5,wheelSpeed:22,friction:1.5,damperLimit:3000,brakeTorque:1600};
+  function setBuild(nextLevels) {
+    const next = buildSpec(nextLevels);
+    if (next.friction !== spec.friction) {
+      for (const tire of tires) for (const node of tire.nodes) {
+        node.getFixtureList().setFriction(next.friction);
+        for (let edge=node.getContactList(); edge; edge=edge.next) edge.contact.resetFriction();
+      }
+    }
+    spec = next;
+  }
+  if (levels) setBuild(levels);
   const exhaustMount = createExhaustMount(body);
   let elapsed = 0;
   let engineLoad = 0, accelerator = 0;
@@ -65,7 +78,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
       const stiffness = mass * omega * omega;
       const dampingForce = 2 * damping * mass * omega * speed * (speed > 0 ? .65 : 1.2);
       // A hydraulic blow-off prevents damping spikes on sharp bumps.
-      const damper = 3000 * Math.tanh(dampingForce / 3000);
+      const damper = spec.damperLimit * Math.tanh(dampingForce / spec.damperLimit);
       const bump = Math.max(0, travel - .14) / .10;
       const droop = Math.max(0, -.14 - travel) / .11;
       const force = -(mass * 9.81 + stiffness * (travel - .045) + damper
@@ -77,7 +90,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
     });
   }
   return {
-    world, body, wheels, rims, joints, tires, stops, points, exhaustMount, motors,
+    world, body, wheels, rims, joints, tires, stops, points, exhaustMount, motors, setBuild,
     get elapsed() { return elapsed; },
     get engineLoad() { return engineLoad; },
     get accelerator() { return accelerator; },
@@ -89,8 +102,8 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
       motors.forEach((j, i) => {
         const powered = drive === 'awd' || (drive === 'rwd' ? i === 0 : i === 1);
         const rollingSpeed=Math.abs(body.getLinearVelocity().x)/.48;
-        j.setMotorSpeed(brake ? 0 : -throttle * Math.min(22,rollingSpeed+5));
-        j.setMaxMotorTorque(brake ? 1600 : Math.abs(throttle) > .01 && powered ? (drive === 'awd' ? 1200 : 2400) : 12);
+        j.setMotorSpeed(brake ? 0 : -throttle * Math.min(spec.wheelSpeed,rollingSpeed+spec.launch));
+        j.setMaxMotorTorque(brake ? spec.brakeTorque : Math.abs(throttle) > .01 && powered ? spec.torque / (drive === 'awd' ? 2 : 1) : 12);
       });
       const h=STEP/substeps;
       for(let i=0;i<substeps;i++){

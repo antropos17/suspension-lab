@@ -28,6 +28,10 @@ test('worker runs the unchanged solver and preserves every contact-node position
   direct.setPressure(.6);direct.tune(1.3,.4);direct.step(0,true);
   reply=await request({type:'step',generation:1,settings:{...config,drive:'rwd',pressure:.6,frequency:1.3,damping:.4},steps:1,throttle:0,brake:true});
   assert.deepEqual(reply.state,snapshot(direct));
+  const upgraded = [3,2,4,2,5,3];
+  direct.setBuild(upgraded); direct.step(1);
+  reply=await request({type:'step',generation:1,settings:{...config,drive:'rwd',pressure:.6,frequency:1.3,damping:.4,levels:upgraded},steps:1,throttle:1,brake:false});
+  assert.deepEqual(reply.state,snapshot(direct),'the live build reaches the worker without resetting the car');
  }finally{await worker.terminate();}
 });
 

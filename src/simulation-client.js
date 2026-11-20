@@ -32,6 +32,7 @@ export function createSimulationClient(worker=new Worker('/physics-worker.js')) 
       worker.postMessage({type:'reset',generation,settings});
     },
     setDrive(drive){settings.drive=drive;},
+    setBuild(levels){settings.levels=[...levels];},
     setPressure(pressure){settings.pressure=pressure;},
     tune(frequency,damping){settings.frequency=frequency;settings.damping=damping;},
     suspend(){accumulator=0;},

@@ -1,0 +1,58 @@
+import { PART_NAMES, THRESHOLDS, levelOf, buildSpec } from './garage.js';
+import { TIRE_RADIUS } from './vehicle-constants.js';
+
+const finishes = ['Ржавчина', 'Грунт', 'Эмаль', 'Два тона', 'Спойлер'];
+
+export function createGaragePanel(left, right, title) {
+  const cards = PART_NAMES.map((name,i) => {
+    const card = document.createElement('div');
+    card.className = 'part-card';
+    card.innerHTML = '<i class="part-icon" aria-hidden="true"></i><div class="part-info"><div><b></b><strong></strong></div><small></small><progress></progress></div>';
+    card.querySelector('i').dataset.part = i;
+    card.querySelector('b').textContent = name;
+    card.querySelector('progress').setAttribute('aria-label', name);
+    (i < 3 ? left : right).append(card);
+    return card;
+  });
+  return function draw(garage, changes, reels) {
+    const levels = garage.points.map(levelOf);
+    const spec = buildSpec(levels);
+    const specs = [spec.torque+' Н·м', 'до '+(spec.wheelSpeed*TIRE_RADIUS*3.6).toFixed(0)+' км/ч',
+      'μ '+spec.friction.toFixed(2), (spec.damperLimit/1000).toFixed(2)+' кН',
+      spec.brakeTorque+' Н·м', finishes[levels[5]-1]];
+    title.textContent = 'Сборка ' + levels.reduce((a,b)=>a+b,0) + ' / 30';
+    cards.forEach((card,i) => {
+      const lv = levels[i], next = THRESHOLDS[lv], points = garage.points[i];
+      card.querySelector('strong').textContent = 'Ур. '+lv;
+      card.querySelector('small').textContent = specs[i] + ' · ' + (next ? points+'/'+next : 'макс.');
+      const bar = card.querySelector('progress');
+      bar.max = next ? next-THRESHOLDS[lv-1] : 1;
+      bar.value = next ? points-THRESHOLDS[lv-1] : 1;
+      if (!changes?.[i].gain) return;
+      const {gain,from,to} = changes[i];
+      const tag = document.createElement('span');
+      tag.className = 'fit-tag';
+      tag.textContent = to > from ? 'Ур. '+from+' → '+to : '+'+gain+' очк.';
+      card.append(tag);
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const flash = tag.animate([{opacity:1},{opacity:1,offset:.8},{opacity:0}],{duration:2100});
+      flash.onfinish = () => tag.remove();
+      if (reduced) return;
+      const source = reels?.querySelector('[data-result="'+i+'"]');
+      if (!source) return;
+      const start = source.getBoundingClientRect(), end = card.querySelector('i').getBoundingClientRect();
+      const chip = document.createElement('i');
+      chip.className = 'part-icon fit-chip';
+      chip.dataset.part = i;
+      chip.style.left = start.left+start.width/2-18+'px';
+      chip.style.top = start.top+start.height/2-18+'px';
+      document.body.append(chip);
+      const dx = end.left+end.width/2-start.left-start.width/2;
+      const dy = end.top+end.height/2-start.top-start.height/2;
+      const travel = chip.animate([{transform:'translate(0,0) scale(1.1)'},{transform:'translate('+dx+'px,'+dy+'px) scale(.75)'}],
+        {duration:480,easing:'cubic-bezier(.22,.6,.35,1)'});
+      travel.onfinish = () => chip.remove();
+      card.animate([{boxShadow:'inset 0 0 0 2px #ffcd76'},{boxShadow:'inset 0 0 0 0 transparent'}],{duration:1050,delay:350});
+    });
+  };
+}

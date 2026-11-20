@@ -8,7 +8,8 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 
 - A: reverse. D: accelerate. Arrow keys also work.
 - Space: brake. P: pause. R: restart.
-- S or **Spin to drive** rolls six parts. Any result gives two seconds of forward throttle. Each additional copy of the most frequent part adds 1.5 seconds, up to 9.5 seconds. A/D, the brake or any pedal immediately takes over. Pause freezes both the reels and the drive timer.
+- S rolls the workshop reels. Each matching group grants points to its own part, and matched mechanical pairs give synergy bonuses. Six distinct parts award the whole garage. Click a settled reel to hold one symbol for the next spin. A/D and the pedals can take over the throttle while the roll still resolves. P pauses the game clock.
+- Engine, gearbox, tires, suspension, brakes and bodywork each have five levels. The local browser garage persists across restarts. First reaching 55, 120 and 260 metres awards workshop points. Bodywork progresses from rusty steel to restored two-tone paint and a final rear spoiler.
 - Touch controls are available on screen.
 - Reach the finish along the 260 m trail. Restart if you roll over.
 - Spring stiffness and shock damping affect the simulation immediately. Show chassis reveals the suspension.

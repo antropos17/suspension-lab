@@ -7,6 +7,8 @@ import { createBakuBackdrop } from './baku-background.js';
 import { createSmokeRenderer } from './smoke-renderer.js';
 import { createDriveSlot } from './drive-slot.js';
 import { createSlotPanel } from './slot-panel.js';
+import { readGarage, advanceGarage, levelOf, CHECKPOINTS, PART_NAMES } from './garage.js';
+import { createGaragePanel } from './garage-panel.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
 const smokeCanvas=document.createElement('canvas'),smokeCtx=smokeCanvas.getContext('2d');
@@ -24,6 +26,64 @@ let width = 1000, height = 500, scale = 64, hudAt=0, needsRedraw=true;
 const keys = new Set(), touches = new Set();
 const slot = createDriveSlot();
 const drawSlot = createSlotPanel(slot, $('slot-bank'), $('spin'), $('slot-status'), $('slot-time'));
+const saveKey = 'suspension-lab.garage.v1';
+function loadGarage() {
+  try { return readGarage(localStorage.getItem(saveKey)); } catch { return readGarage(null); }
+}
+const garage = loadGarage();
+let levels = garage.points.map(levelOf);
+let fitHighlights = [], fittedAt = 0;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const drawGarage = createGaragePanel($('rack-left'), $('rack-right'), $('build-level'));
+drawGarage(garage);
+let routePeak = garage.best, queuedPeak = garage.best, telemetryTime = 0, telemetrySpeed = 0;
+const peakKey = saveKey+'.distance';
+try {
+  const latest = Number(localStorage.getItem(peakKey));
+  if(Number.isInteger(latest) && latest<=FINISH) routePeak=Math.max(routePeak,latest);
+} catch {}
+$('best').textContent='Рекорд '+routePeak+' м';
+function flushDistance() {
+  // An unloading document cannot wait for a Web Lock. Store its last metre
+  // separately so this final write can never overwrite a parts transaction.
+  try {
+    if(routePeak > (Number(localStorage.getItem(peakKey)) || 0)) localStorage.setItem(peakKey,String(routePeak));
+  } catch {}
+}
+function recordProgress(reward, meters) {
+  queuedPeak = Math.max(queuedPeak,meters);
+  const apply = () => {
+    const saved = loadGarage();
+    garage.points = garage.points.map((n,i)=>Math.max(n,saved.points[i]));
+    garage.best = Math.max(garage.best,saved.best);
+    const {changes,crossed} = advanceGarage(garage,meters,reward);
+    try { localStorage.setItem(saveKey,JSON.stringify(garage)); } catch {}
+    levels = garage.points.map(levelOf);
+    sim.setBuild(levels);
+    if(changes.some(c=>c.to>c.from) && !reduceMotion.matches) {
+      fittedAt = sim.elapsed;
+      fitHighlights = changes.flatMap((c,i)=>c.to>c.from ? [i] : []);
+      needsRedraw = true;
+    }
+    drawGarage(garage,changes,reward ? $('slot-bank') : null);
+    if (reward) {
+      reward.receipt = changes.flatMap((c,i)=>c.gain ? [PART_NAMES[i]+' '+(c.to>c.from ? c.from+'→'+c.to : '+'+c.gain)] : []).join(', ');
+      needsRedraw = true;
+    }
+    if(crossed.length) $('route-award').textContent = crossed.at(-1).title+' · детали получены';
+  };
+  if(navigator.locks) navigator.locks.request(saveKey,apply);
+  else apply();
+}
+window.addEventListener('storage', e => {
+  if (e.key !== saveKey || !e.newValue) return;
+  const saved = readGarage(e.newValue);
+  garage.points = garage.points.map((n,i)=>Math.max(n,saved.points[i]));
+  garage.best = Math.max(garage.best,saved.best); routePeak = Math.max(routePeak,garage.best);
+  levels = garage.points.map(levelOf);
+  sim?.setBuild(levels); drawGarage(garage); needsRedraw = true;
+});
+window.addEventListener('pagehide', flushDistance);
 function spin() {
   if (sim.ready && !paused && !finished && slot.spin(sim.elapsed)) drawSlot(sim.elapsed, false);
 }
@@ -32,20 +92,25 @@ let exhaust = createExhaust(), smokeTime=0;
 const presets = { comfort: [1.3, .4], trail: [1.7, .5], sport: [2.6, .65] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
+  if(routePeak > queuedPeak) recordProgress(null,routePeak);
+  $('route-award').textContent = '';
+  telemetryTime = telemetrySpeed = 0;
+  fitHighlights = [];
   slot.reset(); drawSlot(0, true);
   needsRedraw=true;
   samples.length=0;profileTicks=0;drawCount=0;
   exhaust = createExhaust(); exhaust.setIntensity(+$('soot').value);
   clearInput(); sim??=createSimulationClient();smokeTime=0;
-  sim.reset({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value });
-  paused = finished = false; accumulator = 0; camera = { x: 3, y: 1.4 }; $('overlay').hidden = true; $('pause').textContent = 'Pause';
-  $('notice').textContent = 'Above the Caspian. Into the city of winds.';
+  sim.reset({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value, levels });
+  paused = finished = false; accumulator = 0; camera = { x: 3, y: 1.4 }; $('overlay').hidden = true; $('pause').textContent = 'Пауза';
+  $('notice').textContent = 'До брусчатки 55 м';
 }
 function pause(value = !paused) {
   if (finished) return;
-  paused = value; needsRedraw=true;accumulator = 0; sim.suspend();clearInput(); $('overlay').hidden = !paused; $('pause').textContent = paused ? 'Resume' : 'Pause';
+  if (value) flushDistance();
+  paused = value; needsRedraw=true;accumulator = 0; sim.suspend();clearInput(); $('overlay').hidden = !paused; $('pause').textContent = paused ? 'Продолжить' : 'Пауза';
   drawSlot(sim.elapsed, paused || !sim.ready);
-  $('overlay-caption').textContent = 'Take a breath.'; $('overlay-title').textContent = 'Paused'; $('resume').textContent = 'Keep driving';
+  $('overlay-caption').textContent = 'Заезд приостановлен'; $('overlay-title').textContent = 'Пауза'; $('resume').textContent = 'Продолжить заезд';
 }
 function tune() {
   const f = +$('spring').value, d = +$('damping').value;
@@ -62,7 +127,7 @@ document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click
   document.querySelectorAll('[data-drive]').forEach(option => { const selected = option.dataset.drive === drive; option.classList.toggle('selected', selected); option.setAttribute('aria-pressed', selected); });
 }));
 $('pause').addEventListener('click', () => pause()); $('reset').addEventListener('click', reset); $('resume').addEventListener('click', () => finished ? reset() : pause(false));
-$('xray').addEventListener('click', () => { xray = !xray; needsRedraw=true;$('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Hide chassis' : 'Show chassis'; });
+$('xray').addEventListener('click', () => { xray = !xray; needsRedraw=true;$('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Скрыть шасси' : 'Показать шасси'; });
 window.addEventListener('keydown', e => {
   if (e.target instanceof HTMLInputElement && !['KeyA','KeyD','Space','KeyR','KeyP','KeyS'].includes(e.code)) return;
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
@@ -133,26 +198,48 @@ function car() {
     });
     ctx.save();ctx.translate(X(hub.x),Y(hub.y));
     ctx.rotate(-w.getAngle());
-    circle(0,0,r*.51,'#b7b8a7','#e0dfc8',1.4);
-    circle(0,0,r*.43,'#8e9487','#666f63',1);
-    for(let j=0;j<8;j++){
-      const a=j*Math.PI/4;ctx.save();ctx.rotate(a);ctx.beginPath();ctx.ellipse(r*.34,0,r*.075,r*.045,0,0,Math.PI*2);ctx.fillStyle='#2c3830';ctx.fill();ctx.restore();
+    const wheelLevel = levels[2], holes = wheelLevel < 3 ? 5 : 8;
+    circle(0,0,r*.51,wheelLevel === 1?'#61584c':'#b7b8a7',wheelLevel < 3?'#948777':'#e0dfc8',1.4);
+    circle(0,0,r*.43,wheelLevel < 3?'#635f55':'#b3b9b0','#666f63',1);
+    for(let j=0;j<holes;j++){
+      const a=j*Math.PI*2/holes;ctx.save();ctx.rotate(a);ctx.beginPath();ctx.ellipse(r*.34,0,r*(wheelLevel>=4?.12:.075),r*.045,0,0,Math.PI*2);ctx.fillStyle='#2c3830';ctx.fill();ctx.restore();
     }
-    circle(0,0,r*.23,'#c3c4b0','#e8e5d1',1);
+    if(wheelLevel===5){
+      for(let j=0;j<5;j++){const a=j*Math.PI*2/5;line([[0,0],[Math.cos(a)*r*.42,Math.sin(a)*r*.42]],'#d9daca',r*.085);}
+    }
+    circle(0,0,r*.23,wheelLevel===1?'#766f60':'#c3c4b0',wheelLevel===1?'#99917d':'#e8e5d1',1);
     for(let j=0;j<4;j++){const a=j*Math.PI/2;circle(Math.cos(a)*r*.18,Math.sin(a)*r*.18,r*.035,'#4c574d','#d8d6c0',.6);}
     circle(0,0,r*.105,'#737f72','#d0d0b8',1);
     line([[r*.43,0],[r*.49,0]],'#18271f',2); // valve breaks rotational symmetry
     ctx.restore();
   });
   ctx.save();ctx.translate(X(pos.x),Y(pos.y));ctx.rotate(-body.getAngle());ctx.scale(scale,-scale);
-  drawClassicBody(ctx,xray,exhaust.soot);ctx.restore();
+  drawClassicBody(ctx,xray,exhaust.soot,levels[5]);ctx.restore();
   const tip=sim.exhaustMount.point,pipe=local(-1.62,-.22),can=local(-1.87,-.24+sim.exhaustMount.offset*.7);
   line([[X(pipe.x),Y(pipe.y)],[X(can.x),Y(can.y)],[X(tip.x),Y(tip.y)]],'#9a9e97',4);
   circle(X(can.x),Y(can.y),4,'#626d6b');
   const hanger=local(-1.87,-.12);line([[X(hanger.x),Y(hanger.y)],[X(can.x),Y(can.y)]],'#343a37',2);
   circle(X(tip.x),Y(tip.y),1.9,'#151b1d');
   if(xray)sim.rims.forEach((w,i)=>spring(local(i===0?-1.25:1.25,-.05),w.getPosition()));
-
+  if(fitHighlights.length){
+    const age = (sim.elapsed-fittedAt)/1.2;
+    if(age>=1) fitHighlights=[];
+    else {
+      ctx.save();
+      ctx.globalAlpha = 1-Math.max(0,age);
+      ctx.strokeStyle='#ffe5a1';ctx.lineWidth=2;
+      for(const part of fitHighlights){
+        const hubs = sim.rims.map(r=>r.getPosition());
+        const locations = part===2 || part===4 ? hubs : part===3 ? [local(-1.25,-.07),local(1.25,-.07)] :
+          [part===0 ? local(1.37,.23) : part===1 ? local(.45,-.12) : local(-.54,.23)];
+        for(const p of locations){
+          const radius = scale*((part===2?.44:.19)+.27*age);
+          ctx.beginPath();ctx.arc(X(p.x),Y(p.y),radius,0,Math.PI*2);ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }
 }
 function frame(now) {
   const start=profiling?performance.now():0;
@@ -161,7 +248,7 @@ function frame(now) {
   if(!sim.ready){
     drawSlot(sim.elapsed, true);
     scenery();
-    if(sim.error){$('notice').textContent='The simulation could not start. Reload the page to retry.';}
+    if(sim.error){$('notice').textContent='Не удалось запустить физику. Обнови страницу.';}
     requestAnimationFrame(frame);return;
   }
   if((paused||finished)&&!needsRedraw){requestAnimationFrame(frame);return;}
@@ -169,11 +256,22 @@ function frame(now) {
     const forward=keys.has('ArrowRight')||keys.has('ArrowUp')||keys.has('KeyD')||touches.has('forward');
     const reverse=keys.has('ArrowLeft')||keys.has('ArrowDown')||keys.has('KeyA')||touches.has('reverse');
     const brake=keys.has('Space')||touches.has('brake');
-    slot.update(sim.elapsed, forward || reverse || brake);
+    const reward = slot.update(sim.elapsed, forward || reverse || brake);
+    if (reward) {
+      drawSlot(sim.elapsed,false);
+      recordProgress(reward,routePeak);
+    }
     sim.advance(dt, slot.phase === 'driving' ? 1 : Number(forward)-Number(reverse), brake);
     accumulator=Math.min(.05,accumulator+Math.max(0,sim.elapsed-smokeTime));smokeTime=sim.elapsed;
     while(accumulator>=STEP-1e-10){exhaust.step(sim,STEP);accumulator-=STEP;}
-    if(sim.body.getPosition().x>=FINISH+3){finished=true;slot.update(sim.elapsed, true);clearInput();$('overlay').hidden=false;$('overlay-title').textContent='Trail complete!';$('overlay-caption').textContent=`260 metres, every bump earned. ${formatTime(sim.elapsed)}`;$('resume').textContent='Drive again';}
+    if(sim.body.getPosition().x>=FINISH+3){
+      finished=true;
+      const finalReward=slot.update(slot.ends,true);
+      drawSlot(sim.elapsed,true);
+      recordProgress(finalReward,FINISH);
+      clearInput();$('overlay').hidden=false;$('overlay-title').textContent='Финиш!';
+      $('overlay-caption').textContent=`260 м пройдено за ${formatTime(sim.elapsed)}`;$('resume').textContent='Новый заезд';
+    }
   }
   drawSlot(sim.elapsed, paused || finished);
   const physicsEnd=profiling?performance.now():0;
@@ -185,10 +283,19 @@ function frame(now) {
   needsRedraw=false;
   if(profiling)profileOutput.dataset.draws=String(++drawCount);
   if(now>=hudAt||paused||finished){hudAt=now+100;
-  const distance=Math.max(0,Math.min(FINISH,pos.x-3));$('speed').textContent=Math.round(Math.abs(sim.body.getLinearVelocity().x)*3.6);$('distance').textContent=`${Math.floor(distance)} / 260 m`;$('progress').value=finished?FINISH:distance;$('time').textContent=formatTime(sim.elapsed);
+  const distance=Math.max(0,Math.min(FINISH,pos.x-3));$('speed').textContent=Math.round(Math.abs(sim.body.getLinearVelocity().x)*3.6);$('distance').textContent=`${Math.floor(distance)} / 260 м`;$('progress').value=finished?FINISH:distance;$('time').textContent=formatTime(sim.elapsed);
+  routePeak = Math.max(routePeak, Math.floor(distance));
+  if (routePeak >= queuedPeak+10 || CHECKPOINTS.some(c=>queuedPeak<c.meters && routePeak>=c.meters)) recordProgress(null,routePeak);
+  $('best').textContent = 'Рекорд '+routePeak+' м';
+  const signedSpeed = sim.body.getLinearVelocity().x, span = sim.elapsed - telemetryTime;
+  if (span > .025 || telemetryTime === 0) {
+    const accel = span > .025 ? (signedSpeed-telemetrySpeed)/span : 0;
+    $('acceleration').textContent = 'Разгон '+(Math.round(accel*10)/10).toFixed(1)+' м/с²';
+    telemetrySpeed = signedSpeed; telemetryTime = sim.elapsed;
+  }
   $('pressure-live').textContent=`Rear ${sim.tires[0].pressureBar.toFixed(2)} / Front ${sim.tires[1].pressureBar.toFixed(2)} bar`;
   $('rear').value=sim.joints[0].getJointTranslation();$('front').value=sim.joints[1].getJointTranslation();
-  if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Tipped over? Press R for a fresh start.':pos.x>53&&pos.x<91?'The rumble strip. Watch those springs.':pos.x>116&&pos.x<153?'Easy on the climb. Let the suspension work.':sim.elapsed<5?'Above the Caspian. Into the city of winds.':'';}
+  if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Машина перевернулась. Нажми R для нового заезда.':pos.x>53&&pos.x<91?'Брусчатка':pos.x>116&&pos.x<153?'Подъём':sim.elapsed<5?'До брусчатки 55 м':'';}
   }
   if(profiling&&!paused){
     samples.push({gap:frameGap,physics:physicsEnd-start,scenery:sceneryEnd-physicsEnd,smoke:smokeEnd-sceneryEnd,total:performance.now()-start});

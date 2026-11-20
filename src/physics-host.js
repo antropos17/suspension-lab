@@ -27,6 +27,7 @@ export function createPhysicsHost(send) {
         sim=createSimulation(settings);
       } else if(message.type==='step'&&sim&&message.generation===generation) {
         const next=message.settings;
+        if(next.levels?.some((level,i)=>level!==settings.levels?.[i]))sim.setBuild(next.levels);
         if(next.drive!==settings.drive)sim.setDrive(next.drive);
         if(next.pressure!==settings.pressure)sim.setPressure(next.pressure);
         if(next.frequency!==settings.frequency||next.damping!==settings.damping)sim.tune(next.frequency,next.damping);

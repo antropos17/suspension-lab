@@ -30,18 +30,47 @@ export function drawWheelWells(c) {
   c.restore();
 }
 
-export function drawClassicBody(c, xray, soot) {
+// Chipped seam edges stay fixed in chassis coordinates, even while airborne.
+let corrosion;
+function rustLayers() {
+  if (corrosion) return corrosion;
+  corrosion = [new Path2D(),new Path2D(),new Path2D()];
+  let seed = 1441;
+  const noise = () => ((seed = (Math.imul(1664525,seed)+1013904223)>>>0)/4294967296);
+  for (const [cx,cy,spread] of [[-1.83,.22,.17],[-1.5,.07,.24],[-1.09,.16,.17],[-.52,-.19,.28],[.2,-.16,.3],[.69,.13,.16],[1.36,.10,.27],[1.88,.24,.17],[-.54,1.04,.14]]) {
+    for(let i=0;i<23;i++){
+      const x=cx+(noise()-.5)*spread*2,y=cy+(noise()-.5)*spread*.7;
+      const r=.009+noise()**2*.065;
+      corrosion.forEach((path,j)=>{
+        const size=r*(1-j*.31);
+        path.moveTo(x-size,y);
+        path.lineTo(x-size*.61,y+size*.46);path.lineTo(x+size*.12,y+size*.67);
+        path.lineTo(x+size,y+size*.11);path.lineTo(x+size*.76,y-size*.46);
+        path.lineTo(x-size*.25,y-size*.54);path.closePath();
+      });
+    }
+  }
+  return corrosion;
+}
+
+export function drawClassicBody(c, xray, soot, bodyLevel) {
   const line=(p,color,w)=>{c.beginPath();p.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.strokeStyle=color;c.lineWidth=w;c.lineJoin='round';c.stroke();};
   const poly=(p,color,stroke,w=.018)=>{c.beginPath();p.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=color;c.fill();if(stroke){c.strokeStyle=stroke;c.lineWidth=w;c.stroke();}};
   const dot=(x,y,r,color)=>{c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=color;c.fill();};
   const rect=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
   const paint=c.createLinearGradient(0,-.4,0,1.1);
-  paint.addColorStop(0,'#38252b');paint.addColorStop(.25,'#6e2730');paint.addColorStop(.55,'#993e44');paint.addColorStop(.7,'#c16b69');paint.addColorStop(1,'#783239');
+  const colors = bodyLevel < 3 ? ['#484638','#7b7968','#a29b83','#b6b09b','#827e6a'] :
+    bodyLevel >= 4 ? ['#173c3f','#265a5c','#36797a','#66a3a0','#326768'] :
+    ['#38252b','#6e2730','#993e44','#c16b69','#783239'];
+  [0,.25,.55,.7,1].forEach((stop,i)=>paint.addColorStop(stop,colors[i]));
   const chrome=c.createLinearGradient(0,-.32,0,-.12);
   chrome.addColorStop(0,'#424c50');chrome.addColorStop(.45,'#a4adb0');chrome.addColorStop(.55,'#f1efde');chrome.addColorStop(1,'#6b7b80');
   c.save();c.globalAlpha=xray?.28:1;
   bodyPath(c);c.fillStyle=paint;c.fill();c.strokeStyle='#302b2e';c.lineWidth=.024;c.stroke();
   c.save();bodyPath(c);c.clip();
+  if(bodyLevel < 3){
+    poly([[-1.04,.4],[-.19,.42],[-.19,-.27],[-.65,-.27],[-.71,-.01]],bodyLevel===1?'#8b907f':'#929897');
+  }
   // Roof and gutters, with real pillar widths around the glass.
   poly([[-1.07,.57],[-.8,1.02],[-.63,1.09],[.43,1.09],[.61,1],[.94,.57]],'#dbd9cc');
   line([[-.85,1.03],[-.66,1.075],[.43,1.075],[.57,1.025]],'#f7f2df',.024);
@@ -70,10 +99,11 @@ export function drawClassicBody(c, xray, soot) {
   line([[-1.11,.44],[.99,.44]],'#222d30',.035);
   line([[-1.13,.41],[1.02,.41]],'#d2d4ca',.024);
   // Stamped panel creases and four-door shut lines.
-  line([[-1.96,.3],[-1.19,.36]],'#e29488',.018);
-  line([[1.07,.37],[1.98,.31]],'#df877e',.022);
+  const glint=bodyLevel >= 4 ? '#a3c9ba' : bodyLevel < 3 ? '#b9aa91' : '#e29488';
+  line([[-1.96,.3],[-1.19,.36]],glint,.018);
+  line([[1.07,.37],[1.98,.31]],glint,.022);
   line([[-2.02,.17],[2.04,.17]],'#502c32',.022);
-  line([[-2.02,.195],[2.04,.195]],'#cb7970',.014);
+  line([[-2.02,.195],[2.04,.195]],bodyLevel >= 4 ? '#ddcd9e' : glint,bodyLevel >= 4 ? .032 : .014);
   for(const p of [[[-1.07,.4],[-1.04,.25],[-.66,.03],[-.65,-.27]],[[-.16,.43],[-.16,-.27]],[[.85,.42],[.89,.24],[.69,.01],[.67,-.28]]])line(p,'#40292f',.018);
   line([[-.63,-.29],[.66,-.29]],'#c5c7b9',.035);
   line([[-.59,-.32],[.63,-.32]],'#252b2c',.024);
@@ -97,14 +127,24 @@ export function drawClassicBody(c, xray, soot) {
   // Arch lips are concentric with the physical liner, outside the cutout.
   for(const x of [-1.25,1.25]){
     c.beginPath();c.ellipse(x,ARCH_Y,ARCH_X+.016,ARCH_Y_RADIUS+.016,0,archAngle,Math.PI-archAngle);
-    c.strokeStyle='#d39a8b';c.lineWidth=.025;c.stroke();
+    c.strokeStyle=glint;c.lineWidth=.025;c.stroke();
     c.beginPath();c.ellipse(x,ARCH_Y,ARCH_X+.038,ARCH_Y_RADIUS+.038,0,archAngle,Math.PI-archAngle);
     c.strokeStyle='#522d34';c.lineWidth=.012;c.stroke();
   }
   const stain=c.createRadialGradient(-2,-.21,0,-2,-.21,.27);
   stain.addColorStop(0,`rgba(15,18,19,${.15+soot*.6})`);stain.addColorStop(1,'rgba(15,18,19,0)');
   rect(-2.09,-.34,.48,.39,stain);
+  if(bodyLevel < 3){
+    c.save();c.globalAlpha *= bodyLevel===1 ? 1 : .38;
+    rustLayers().forEach((path,i)=>{c.fillStyle=['#c0ac88','#9c522e','#693d28'][i];c.fill(path);});
+    c.restore();
+  }
   c.restore();
+  if(bodyLevel >= 5){
+    for(const x of [-2.01,-1.75])line([[x,.36],[x-.035,.62]],'#364340',.045);
+    poly([[-2.23,.60],[-1.62,.62],[-1.56,.67],[-2.24,.69]],'#284644','#b6cabb',.018);
+    poly([[-2.25,.59],[-2.16,.60],[-2.17,.72],[-2.26,.73]],'#326965','#213935',.012);
+  }
   // Lamps and bumpers live outside the body silhouette, away from the arches.
   poly([[-2.088,.2],[-1.94,.2],[-1.94,.02],[-2.08,.02]],'#632829','#2b3030');
   rect(-2.075,.12,.12,.065,'#e47f57');rect(-2.075,.045,.12,.06,'#ad3637');

@@ -7,7 +7,7 @@
     "dev": "node server.mjs",
     "build": "node build.mjs",
     "test": "node --test tests/*.test.mjs",
-    "lint": "node --check src/game.js && node --check src/drive-slot.js && node --check src/slot-panel.js && node --check src/physics.js && node --check src/exhaust.js && node --check src/pneumatic-tire.js && node --check src/terrain.js && node --check src/car-art.js && node --check src/baku-background.js && node --check src/vehicle-geometry.js && node --check src/exhaust-mount.js && node --check src/vehicle-constants.js && node --check src/physics-host.js && node --check src/physics-worker.js && node --check src/simulation-client.js && node --check src/snapshot-playback.js && node --check src/smoke-renderer.js && node --check src/static-files.js && node --check server.mjs && node --check build.mjs"
+    "lint": "node --check src/game.js && node --check src/drive-slot.js && node --check src/garage.js && node --check src/garage-panel.js && node --check src/slot-panel.js && node --check src/physics.js && node --check src/exhaust.js && node --check src/pneumatic-tire.js && node --check src/terrain.js && node --check src/car-art.js && node --check src/baku-background.js && node --check src/vehicle-geometry.js && node --check src/exhaust-mount.js && node --check src/vehicle-constants.js && node --check src/physics-host.js && node --check src/physics-worker.js && node --check src/simulation-client.js && node --check src/snapshot-playback.js && node --check src/smoke-renderer.js && node --check src/static-files.js && node --check server.mjs && node --check build.mjs"
   },
   "dependencies": { "planck": "1.5.1" },
   "devDependencies": { "esbuild": "0.28.2" }

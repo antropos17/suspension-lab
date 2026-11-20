@@ -4,89 +4,58 @@
 .drive-options{display:flex;gap:6px;margin-bottom:18px}.drive-options button{flex:1;font-size:11px;padding:9px 7px}.drive-options .selected{color:#fff;background:#42664f;border-color:#42664f}@media(max-width:800px){.drive-options{min-width:220px;margin-bottom:0}}
 .soot-control{margin-top:20px;max-width:260px}.soot-control label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px}.soot-control output{color:#788372;font-size:11px}.soot-control .range-labels{margin-bottom:0}
 
-/* Enamel instrument housing and six ivory mechanical drums. */
+/* Painted bench, warm instrument faces and brass retaining rings. */
+.stage {height:clamp(280px,49vh,540px);min-height:min(32vw,445px)}
 .drive-slot {
-  --brass: #dfbc75;
-  display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(300px, 2.25fr) minmax(145px, .95fr);
-  align-items: center;
-  gap: clamp(12px, 2vw, 30px);
-  margin-top: 12px;
-  padding: 16px clamp(15px, 2vw, 30px);
-  color: #f6eddb;
-  background: linear-gradient(115deg, #304a43, #1c3531 55%, #233c37);
-  border: 1px solid #203831;
-  border-radius: 13px;
-  box-shadow: inset 0 1px #fff3, 0 3px 8px #233e3119;
+  display:grid;grid-template-columns:minmax(165px,1fr) minmax(0,2.9fr) minmax(165px,1fr);
+  gap:clamp(12px,1.8vw,28px);align-items:center;margin-top:12px;padding:16px clamp(13px,1.7vw,26px);
+  border:1px solid #162e2c;border-radius:14px;color:#f4e9cf;
+  background:linear-gradient(115deg,#334c45,#1a302e 53%,#2b433e);
+  box-shadow:inset 0 1px #ffffff30,0 4px 12px #18352724;
 }
-.slot-heading h2 { font: italic 600 clamp(22px, 2.1vw, 33px)/1.05 Georgia, serif; letter-spacing: -.04em; }
-.slot-heading p { color: #d0d9cc; max-width: 30ch; font-size: 12px; line-height: 1.45; }
-.slot-bank {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 3px;
-  padding: 5px;
-  background: #252b25;
-  border: 1px solid #a49672;
-  border-radius: 8px;
-  box-shadow: inset 0 2px 4px #101b17, 0 1px #ffffff25;
+.part-rack {display:grid;gap:5px;min-width:0}
+.part-card {position:relative;display:flex;align-items:center;gap:9px;min-width:0;padding:6px 8px;border:1px solid #99ad9238;border-radius:5px;background:#101f1e65}
+.part-icon,.slot-tile i {display:block;aspect-ratio:1;background:#efe2c8 url('assets/workshop-parts.png') 0 0 / 300% 200% no-repeat}
+.part-icon {width:35px;flex:none;border-radius:4px;box-shadow:0 1px 3px #091b1b55}
+[data-part="1"] {background-position:50% 0!important}
+[data-part="2"] {background-position:100% 0!important}
+[data-part="3"] {background-position:0 100%!important}
+[data-part="4"] {background-position:50% 100%!important}
+[data-part="5"] {background-position:100% 100%!important}
+.part-info {min-width:0;flex:1}
+.part-info>div {display:flex;justify-content:space-between;align-items:baseline;gap:4px}
+.part-info b {font-size:13px}.part-info strong {color:#eac887;font:600 10px/1.2 monospace;white-space:nowrap}
+.part-info small {display:block;margin:2px 0;color:#c1cec2;font-size:10px}
+.part-info progress {display:block;height:3px}.part-info progress::-webkit-progress-value {background:#e9bd70}
+.fit-chip {position:fixed;width:36px;z-index:20;pointer-events:none;border:1px solid #e8c789}
+.fit-tag {position:absolute;bottom:4px;right:6px;background:#f3cd80;color:#2c261a;padding:3px 6px;border-radius:3px;font:bold 11px monospace;z-index:1}
+.reel-console {min-width:0}.slot-heading,.slot-controls {display:flex;align-items:center;justify-content:space-between;gap:10px}
+.slot-heading {margin:0 1px 9px}.slot-heading h2 {font:italic 600 clamp(21px,2.2vw,34px)/1 Georgia,serif;letter-spacing:-.045em;margin:0}
+#build-level {font:11px monospace;color:#eac887;white-space:nowrap}
+.slot-bank {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;padding:4px;background:#172322;border:1px solid #bea675;border-radius:7px;box-shadow:inset 0 2px 4px #111}
+.slot-reel {height:clamp(53px,6.4vw,90px);padding:0;overflow:hidden;position:relative;border:0;border-radius:3px;background:#efe2c8;isolation:isolate}
+.slot-reel:disabled {cursor:default;color:inherit}
+.slot-reel::after {content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(0deg,#493d245e,transparent 23%,transparent 77%,#493d2460);border-radius:inherit}
+.slot-reel.match::after {box-shadow:inset 0 -4px #c38e37,inset 0 0 0 2px #cda960}
+.slot-reel[aria-pressed=true]::before {content:'ФИКС';position:absolute;bottom:0;left:0;right:0;z-index:2;background:#204b49;color:#fff0cb;font:700 9px/14px monospace;letter-spacing:.12em}
+.slot-strip,.slot-tile {height:100%}.slot-tile {display:grid;place-items:center;overflow:hidden;container-type:size}
+.slot-tile i {width:min(100cqw,100cqh)}
+.slot-controls {margin-top:8px;justify-content:flex-start;font-size:12px;min-height:35px}
+#spin {flex:none;padding:8px 20px;font-weight:bold;color:#302817;border:1px solid #aa8646;background:linear-gradient(#f4d99d,#d9ac62);box-shadow:inset 0 1px #fff8,0 2px 2px #10231c75}
+#spin:hover:enabled {background:#f5dba2}#spin:disabled {opacity:.62;cursor:default}#spin kbd {margin-left:6px;border-color:#89724d}
+#slot-time {color:#efc580;white-space:nowrap;font-variant-numeric:tabular-nums}
+#slot-time:not(:empty)::before {content:' / '}
+.recipes {margin:7px 0 0;color:#bac9bb;font-size:11px}.recipes p {font-size:12px;color:#e4ebdf}
+summary {cursor:pointer}summary:focus-visible {outline:2px solid #ba833b;outline-offset:3px}
+.manual-settings {margin:16px 0}.manual-settings>summary {font-size:14px;font-weight:bold}
+@media(max-width:940px){
+  .drive-slot{grid-template-columns:1fr 1fr;gap:10px;padding:13px}
+  .reel-console{grid-column:1/-1;grid-row:1}.part-rack{gap:4px}.part-card{padding:4px 6px}
+  .slot-reel{height:clamp(48px,10vw,76px)}.part-icon{width:30px}
 }
-.slot-reel {
-  height: clamp(52px, 6.4vw, 85px);
-  overflow: hidden;
-  position: relative;
-  border-radius: 3px;
-  background: #f3e9ce;
-  isolation: isolate;
-}
-.slot-reel::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(0deg, #493d2470, transparent 24%, transparent 76%, #493d2460);
-  box-shadow: inset 0 0 0 1px #715c382b;
-  border-radius: inherit;
-}
-.slot-reel.match::after { box-shadow: inset 0 -4px #b78128, inset 0 0 0 2px #c79749; }
-.slot-strip, .slot-tile { height: 100%; }
-.slot-tile { display: grid; place-items: center; overflow: hidden; container-type: size; }
-.slot-tile i {
-  display: block;
-  width: min(100cqw, 100cqh);
-  aspect-ratio: 1;
-  background: url('assets/ignition-parts.png') 0 0 / 300% 200% no-repeat;
-}
-.slot-tile i[data-part="1"] { background-position: 50% 0; }
-.slot-tile i[data-part="2"] { background-position: 100% 0; }
-.slot-tile i[data-part="3"] { background-position: 0 100%; }
-.slot-tile i[data-part="4"] { background-position: 50% 100%; }
-.slot-tile i[data-part="5"] { background-position: 100% 100%; }
-.slot-controls { text-align: center; font-size: 11px; color: #d6decf; }
-#spin {
-  display: block; width: 100%; margin-bottom: 8px; font-weight: bold;
-  color: #302817; border-color: #aa8646; background: linear-gradient(#f1d79d, #d6b271);
-  box-shadow: inset 0 1px #fff8, 0 2px 2px #10231c75;
-}
-#spin:hover:enabled { background: #f0d8a5; }
-#spin:active:enabled { transform: translateY(1px); }
-#spin:disabled { cursor: default; opacity: .64; }
-#spin kbd { margin-left: 5px; border-color: #8f753f; }
-#slot-time { color: var(--brass); font-variant-numeric: tabular-nums; white-space: nowrap; }
-#slot-time:not(:empty) { margin-left: .45em; }
-@media (max-width: 820px) {
-  .drive-slot { grid-template-columns: 1fr auto; gap: 9px 14px; }
-  .slot-heading p { max-width: none; font-size: 11px; margin: 3px 0 0; }
-  .slot-bank { grid-column: 1/-1; grid-row: 2; }
-  .slot-controls { grid-column: 2; grid-row: 1; }
-  .slot-heading h2 { margin: 0; }
-  #spin { padding: 8px 12px; margin-bottom: 3px; }
-  .slot-reel { height: clamp(42px, 11vw, 72px); }
-}
-@media (max-width: 480px) {
-  .drive-slot { padding: 11px; }
-  .slot-heading p { max-width: 25ch; }
-  .slot-bank { padding: 3px; gap: 2px; }
-  .slot-controls { max-width: 115px; }
-  #spin kbd { display: none; }
+@media(max-width:480px){
+  main{padding:9px}.stage{height:34vh;min-height:240px}.drive-slot{gap:8px;padding:9px}
+  .part-card{gap:5px}.part-info b{font-size:12px}.part-icon{width:24px}.slot-controls{font-size:11px}
+  #spin{padding:8px 10px}#spin kbd{display:none}.part-info strong{font-size:9px}
+  .slot-heading h2{font-size:22px}.slot-bank{gap:2px;padding:3px}
 }
