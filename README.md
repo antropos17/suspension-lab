@@ -8,6 +8,7 @@ Double-click `Play.cmd`, then open http://127.0.0.1:4187. Alternatively run `npm
 
 - A: reverse. D: accelerate. Arrow keys also work.
 - Space: brake. P: pause. R: restart.
+- S or **Spin to drive** rolls six parts. Any result gives two seconds of forward throttle. Each additional copy of the most frequent part adds 1.5 seconds, up to 9.5 seconds. A/D, the brake or any pedal immediately takes over. Pause freezes both the reels and the drive timer.
 - Touch controls are available on screen.
 - Reach the finish along the 260 m trail. Restart if you roll over.
 - Spring stiffness and shock damping affect the simulation immediately. Show chassis reveals the suspension.

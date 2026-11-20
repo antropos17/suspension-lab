@@ -5,6 +5,8 @@ import { groundHeight } from './terrain.js';
 import { drawClassicBody, drawWheelWells } from './car-art.js';
 import { createBakuBackdrop } from './baku-background.js';
 import { createSmokeRenderer } from './smoke-renderer.js';
+import { createDriveSlot } from './drive-slot.js';
+import { createSlotPanel } from './slot-panel.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
 const smokeCanvas=document.createElement('canvas'),smokeCtx=smokeCanvas.getContext('2d');
@@ -20,10 +22,17 @@ if(profileOutput){profileOutput.id='frame-profile';profileOutput.hidden=true;}
 let sim, paused = false, finished = false, xray = false, drive = 'awd', accumulator = 0, last = performance.now(), camera = { x: 3, y: 1.4 };
 let width = 1000, height = 500, scale = 64, hudAt=0, needsRedraw=true;
 const keys = new Set(), touches = new Set();
+const slot = createDriveSlot();
+const drawSlot = createSlotPanel(slot, $('slot-bank'), $('spin'), $('slot-status'), $('slot-time'));
+function spin() {
+  if (sim.ready && !paused && !finished && slot.spin(sim.elapsed)) drawSlot(sim.elapsed, false);
+}
+$('spin').addEventListener('click', spin);
 let exhaust = createExhaust(), smokeTime=0;
 const presets = { comfort: [1.3, .4], trail: [1.7, .5], sport: [2.6, .65] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
+  slot.reset(); drawSlot(0, true);
   needsRedraw=true;
   samples.length=0;profileTicks=0;drawCount=0;
   exhaust = createExhaust(); exhaust.setIntensity(+$('soot').value);
@@ -35,6 +44,7 @@ function reset() {
 function pause(value = !paused) {
   if (finished) return;
   paused = value; needsRedraw=true;accumulator = 0; sim.suspend();clearInput(); $('overlay').hidden = !paused; $('pause').textContent = paused ? 'Resume' : 'Pause';
+  drawSlot(sim.elapsed, paused || !sim.ready);
   $('overlay-caption').textContent = 'Take a breath.'; $('overlay-title').textContent = 'Paused'; $('resume').textContent = 'Keep driving';
 }
 function tune() {
@@ -54,10 +64,10 @@ document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click
 $('pause').addEventListener('click', () => pause()); $('reset').addEventListener('click', reset); $('resume').addEventListener('click', () => finished ? reset() : pause(false));
 $('xray').addEventListener('click', () => { xray = !xray; needsRedraw=true;$('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Hide chassis' : 'Show chassis'; });
 window.addEventListener('keydown', e => {
-  if (e.target instanceof HTMLInputElement && !['KeyA','KeyD','Space','KeyR','KeyP'].includes(e.code)) return;
+  if (e.target instanceof HTMLInputElement && !['KeyA','KeyD','Space','KeyR','KeyP','KeyS'].includes(e.code)) return;
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
   if (e.repeat) return;
-  if (e.code === 'KeyR') reset(); else if (e.code === 'KeyP') pause(); else keys.add(e.code);
+  if (e.code === 'KeyR') reset(); else if (e.code === 'KeyP') pause(); else if(e.code === 'KeyS') spin(); else keys.add(e.code);
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
 window.addEventListener('blur', () => { clearInput(); pause(true); });
@@ -149,6 +159,7 @@ function frame(now) {
   const frameGap=now-last;
   const dt=Math.min((now-last)/1000,.05);last=now;
   if(!sim.ready){
+    drawSlot(sim.elapsed, true);
     scenery();
     if(sim.error){$('notice').textContent='The simulation could not start. Reload the page to retry.';}
     requestAnimationFrame(frame);return;
@@ -158,11 +169,13 @@ function frame(now) {
     const forward=keys.has('ArrowRight')||keys.has('ArrowUp')||keys.has('KeyD')||touches.has('forward');
     const reverse=keys.has('ArrowLeft')||keys.has('ArrowDown')||keys.has('KeyA')||touches.has('reverse');
     const brake=keys.has('Space')||touches.has('brake');
-    sim.advance(dt,Number(forward)-Number(reverse),brake);
+    slot.update(sim.elapsed, forward || reverse || brake);
+    sim.advance(dt, slot.phase === 'driving' ? 1 : Number(forward)-Number(reverse), brake);
     accumulator=Math.min(.05,accumulator+Math.max(0,sim.elapsed-smokeTime));smokeTime=sim.elapsed;
     while(accumulator>=STEP-1e-10){exhaust.step(sim,STEP);accumulator-=STEP;}
-    if(sim.body.getPosition().x>=FINISH+3){finished=true;clearInput();$('overlay').hidden=false;$('overlay-title').textContent='Trail complete!';$('overlay-caption').textContent=`260 metres, every bump earned. ${formatTime(sim.elapsed)}`;$('resume').textContent='Drive again';}
+    if(sim.body.getPosition().x>=FINISH+3){finished=true;slot.update(sim.elapsed, true);clearInput();$('overlay').hidden=false;$('overlay-title').textContent='Trail complete!';$('overlay-caption').textContent=`260 metres, every bump earned. ${formatTime(sim.elapsed)}`;$('resume').textContent='Drive again';}
   }
+  drawSlot(sim.elapsed, paused || finished);
   const physicsEnd=profiling?performance.now():0;
   const pos=sim.body.getPosition();
   // Horizontal follow uses the same interpolated pose as every car component.
