@@ -74,11 +74,15 @@ export function purchase(garage, kind, index) {
 }
 
 export function buildSpec([engine, transmission, wheels, suspension, brakes, body=1, exhaust=1, nitro=1], kits=[]) {
+  const tireRadius = [.305, .315, .325, .34, .355, .375, .40, .425][wheels-1];
+  const rimRadius = [13, 13, 14, 15, 16, 17, 18, 19][wheels-1] * .0254 / 2;
+  const axleTorque = [95, 205, 365, 590, 850, 1250, 1870, 2850][engine-1];
   return {
-    torque: (1850 + 340 * (engine-1)) * (kits[0] ? 1.18 : 1),
+    tireRadius, rimRadius,
+    torque: axleTorque * (kits[0] ? 1.18 : 1),
     aero: Math.max(0,body-4)/4,
-    launch: 4.3 + .54 * (engine-1),
-    wheelSpeed: 22 + 1.7 * (transmission-1),
+    launch: 3.0 + .72 * (engine-1),
+    wheelSpeed: (2.15 + 2.07 * (transmission-1)) / tireRadius,
     friction: 1.28 + .11 * (wheels-1),
     damperLimit: 2300 + 230 * (suspension-1),
     brakeTorque: 650 + 240 * (brakes-1),

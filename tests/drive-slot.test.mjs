@@ -44,7 +44,7 @@ test('driving the entire course changes only the distance record',()=>{
 });
 test('nitro boosts wheel motors, depletes, brakes take priority, and distance refills the tank',()=>{
   const runs=[false,true].map(nitro=>{
-    const s=createSimulation({levels:Array(8).fill(1),heightAt:()=>0});
+    const s=createSimulation({levels:[3,3,1,1,1,1,1,1],heightAt:()=>0});
     for(let i=0;i<120;i++)s.step();
     for(let i=0;i<145;i++)s.step(1,false,nitro);
     return s;
@@ -58,17 +58,35 @@ test('nitro boosts wheel motors, depletes, brakes take priority, and distance re
   boost.step(1,true,true);assert.equal(boost.boosting,false);
 });
 
-test('career builds improve measured launch and speed; fitting wheels updates existing contact friction', () => {
+test('career builds improve measured launch and speed; wheel fit changes the rim, contact ring and grip in place', () => {
   const speeds=[];
   for(const level of [1,5]){
     const levels=Array(6).fill(level);
     const sim=createSimulation({levels,heightAt:()=>0});
     for(let i=0;i<120;i++)sim.step();
-    const tread=sim.tires.flatMap(t=>t.nodes).find(n=>n.getContactList()?.contact.isTouching());
-    const contact=tread.getContactList().contact;
-    const before=contact.getFriction();
+    const oldTire=sim.tires[0], count=sim.world.getBodyCount(), joints=sim.world.getJointCount();
+    const beforeX=sim.body.getPosition().x;
+    sim.setPressure(1.8);
     sim.setBuild([level,level,level===1?5:1,level,level,level]);
-    assert.notEqual(contact.getFriction(),before);
+    const tire=sim.tires[0];
+    assert.equal(tire.rim,oldTire.rim);
+    assert.notEqual(tire.nodes[0],oldTire.nodes[0]);
+    assert.notEqual(tire.rimRadius,oldTire.rimRadius);
+    assert.notEqual(tire.outerRadius,oldTire.outerRadius);
+    assert.equal(tire.rim.getFixtureList().getShape().getRadius(),tire.rimRadius);
+    assert.equal(tire.inflationBar,1.8);
+    assert.equal(sim.body.getPosition().x,beforeX);
+    assert.equal(sim.world.getBodyCount(),count);
+    assert.equal(sim.world.getJointCount(),joints);
+    for(let i=0;i<60;i++)sim.step();
+    assert.ok(tire.getContactWidth()>0);
+    for(const node of tire.nodes){
+      for(let edge=node.getContactList();edge;edge=edge.next){
+        if(edge.other.isStatic() && edge.contact.isTouching())
+          assert.ok(Math.abs(edge.contact.getFriction()-Math.sqrt(.95*(level===1?1.72:1.28)))<1e-8);
+      }
+    }
+    sim.setPressure(2.2);
     sim.setBuild(levels);
     let launch;
     for(let i=1;i<=480;i++){sim.step(1); if(i===90)launch=sim.body.getLinearVelocity().x;}
@@ -112,5 +130,23 @@ test('the shortest combination drives each transmission through ground contacts 
     assert.ok(Math.abs(poweredSteps * STEP - slot.result.seconds) <= STEP);
     assert.equal(slot.phase, 'ready');
     assert.ok(sim.body.getPosition().x > 8, drive);
+  }
+});
+
+test('the stock car rolls back on the first rise; the next build clears it under power',()=>{
+  for(const level of [1,2]){
+    const sim=createSimulation({levels:Array(8).fill(level)});
+    for(let i=0;i<120;i++)sim.step();
+    assert.equal(sim.tires[0].outerRadius,level===1?.305:.315);
+    let peak=0,rollback=0;
+    for(let i=0;i<16/STEP;i++){
+      sim.step(1);
+      const x=sim.body.getPosition().x;
+      peak=Math.max(peak,x);rollback=Math.max(rollback,peak-x);
+    }
+    if(level===1){
+      assert.ok(peak>14 && peak<17);
+      assert.ok(rollback>1);
+    }else assert.ok(peak>25);
   }
 });

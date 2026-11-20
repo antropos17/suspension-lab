@@ -1,5 +1,9 @@
 # Vehicle model revision
 
+## Career tires — 2026-11-21
+
+Career builds use nominal outer radii of 305–425 mm and 13–19 inch rims. Each wheel grade sets the actual rim fixture, tread-node radius, bead anchors and reference chamber volume. When fitting wheels, the replacement ring inherits hub motion and inflation. Grounded fits adjust the assembly height by the radius difference. The stand-alone reference simulation retains a 520 mm tire for comparisons with its earlier suspension and solver regressions. Measurements for the stock and maximum career builds are in [STATUS.md](STATUS.md).
+
 ## Tire stability correction — 2026-11-04
 
 The production solver now uses eight 960 Hz substeps with 8 velocity / 4 position iterations instead of four 480 Hz substeps with 16 / 8 iterations. The velocity-iteration budget per game tick remains 64; the smaller step resolves the stiff belt and pressure dynamics more accurately. Rings above 32 nodes use at least 16 substeps. `heightAt` is an optional deterministic simulation fixture for flat-road verification; gameplay still uses the existing trail profile.

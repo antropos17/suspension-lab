@@ -5,10 +5,10 @@ export { TIRE_RADIUS, RIM_RADIUS } from './vehicle-constants.js';
 export const ATMOSPHERE=101325;
 // 2D pneumatic carcass. Rigid contact beads are elastically linked, not a rigid
 // tire collider. Gas work is p*dV with V=width*(polygon area - rim area).
-export function createPneumaticTire(world,rim,{pressure=2.2,count=32}={}){
- const skin=.048, radius=TIRE_RADIUS-skin, width=.18, mass=24;
+export function createPneumaticTire(world,rim,{pressure=2.2,count=32,outerRadius=TIRE_RADIUS,rimRadius=RIM_RADIUS,friction=1.5}={}){
+ const skin=.048*outerRadius/TIRE_RADIUS, radius=outerRadius-skin, width=.18, mass=24;
  const nodes=[],links=[],referenceArea=count*.5*radius**2*Math.sin(2*Math.PI/count);
- const rimArea=Math.PI*RIM_RADIUS**2,referenceVolume=(referenceArea-rimArea)*width;
+ const rimArea=Math.PI*rimRadius**2,referenceVolume=(referenceArea-rimArea)*width;
  let inflation=pressure;
  const group=-2; // tire nodes do not collide with one another or the rim
  const link=(a,b,anchorA,anchorB,hz,damping,length)=>{
@@ -17,13 +17,13 @@ export function createPneumaticTire(world,rim,{pressure=2.2,count=32}={}){
  };
  for(let i=0;i<count;i++){
   const angle=i*2*Math.PI/count,p=rim.getWorldPoint(Vec2(radius*Math.cos(angle),radius*Math.sin(angle)));
-  const n=world.createDynamicBody({position:p,fixedRotation:true,bullet:true});
-  n.createFixture(new Circle(skin),{density:mass/count/(Math.PI*skin**2),friction:1.5,restitution:0,filterGroupIndex:group,filterCategoryBits:2,filterMaskBits:5,userData:'tread'});
+  const n=world.createDynamicBody({position:p,linearVelocity:rim.getLinearVelocityFromWorldPoint(p),fixedRotation:true,bullet:true});
+  n.createFixture(new Circle(skin),{density:mass/count/(Math.PI*skin**2),friction,restitution:0,filterGroupIndex:group,filterCategoryBits:2,filterMaskBits:5,userData:'tread'});
   nodes.push(n);
-  const bead=rim.getWorldPoint(Vec2(RIM_RADIUS*Math.cos(angle),RIM_RADIUS*Math.sin(angle)));
+  const bead=rim.getWorldPoint(Vec2(rimRadius*Math.cos(angle),rimRadius*Math.sin(angle)));
   link(rim,n,bead,p,10,.65);
   for(const side of [-1,1]){
-   const q=rim.getWorldPoint(Vec2(RIM_RADIUS*Math.cos(angle+side*.5),RIM_RADIUS*Math.sin(angle+side*.5)));
+   const q=rim.getWorldPoint(Vec2(rimRadius*Math.cos(angle+side*.5),rimRadius*Math.sin(angle+side*.5)));
    link(rim,n,q,p,16,.65);
   }
  }
@@ -46,7 +46,7 @@ export function createPneumaticTire(world,rim,{pressure=2.2,count=32}={}){
   const volume=Math.max(referenceVolume*.15,(polygonArea()-rimArea)*width);
   return Math.max(0,(ATMOSPHERE+inflation*1e5)*referenceVolume/volume-ATMOSPHERE);
  };
- return {rim,nodes,skin,width,referenceArea,referenceVolume,links,
+ return {rim,nodes,skin,outerRadius,rimRadius,width,referenceArea,referenceVolume,links,
   get area(){return polygonArea();},get pressureBar(){return gasPressure()/1e5;},
   get inflationBar(){return inflation;},
   setPressure(bar){if(Number.isFinite(bar))inflation=Math.max(.6,Math.min(3.2,bar));nodes.forEach(n=>n.setAwake(true));rim.setAwake(true);},
@@ -60,7 +60,7 @@ export function createPneumaticTire(world,rim,{pressure=2.2,count=32}={}){
    }
   },
   getContactWidth(){const xs=[];for(const node of nodes)for(let e=node.getContactList();e;e=e.next)if(e.other.isStatic()&&e.contact.isTouching()){xs.push(node.getPosition().x);break;}return xs.length?Math.max(...xs)-Math.min(...xs)+skin*2:0;},
-  getDeflection(){return TIRE_RADIUS-(rim.getPosition().y-Math.min(...nodes.map(n=>n.getPosition().y-skin)));},
+  getDeflection(){return outerRadius-(rim.getPosition().y-Math.min(...nodes.map(n=>n.getPosition().y-skin)));},
   getOutline(){return nodes.map((n,i)=>{const prev=nodes[(i+count-1)%count].getPosition(),next=nodes[(i+1)%count].getPosition(),p=n.getPosition();const dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1;return {x:p.x+dy/len*skin,y:p.y-dx/len*skin};});}
  };
 }

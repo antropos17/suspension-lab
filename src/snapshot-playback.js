@@ -18,7 +18,7 @@ function blend(out,a,b,t){
     out.wheels[i].angle=mix(a.wheels[i].angle,b.wheels[i].angle,t);
     point(out.rims[i],a.rims[i],b.rims[i],t);
     out.travel[i]=mix(a.travel[i],b.travel[i],t);
-    out.tires[i].pressureBar=mix(a.tires[i].pressureBar,b.tires[i].pressureBar,t);
+    for(const key of ['pressureBar','skin','outerRadius','rimRadius'])out.tires[i][key]=mix(a.tires[i][key],b.tires[i][key],t);
     for(let j=0;j<out.tires[i].nodes.length;j++)point(out.tires[i].nodes[j],a.tires[i].nodes[j],b.tires[i].nodes[j],t);
   }
 }

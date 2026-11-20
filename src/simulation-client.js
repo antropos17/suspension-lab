@@ -22,6 +22,8 @@ export function createSimulationClient(worker=new Worker('/physics-worker.js')) 
     rims:[0,1].map(i=>({getPosition:()=>state.rims[i]})),
     joints:[0,1].map(i=>({getJointTranslation:()=>state.travel[i]})),
     tires:[0,1].map(i=>({
+      get rimRadius(){return state.tires[i].rimRadius;},
+      get outerRadius(){return state.tires[i].outerRadius;},
       get skin(){return state.tires[i].skin;},
       get pressureBar(){return state.tires[i].pressureBar;},
       nodes:Array.from({length:32},(_,j)=>({getPosition:()=>state.tires[i].nodes[j]})),

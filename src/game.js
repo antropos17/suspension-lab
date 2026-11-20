@@ -1,5 +1,5 @@
 import { createSimulationClient } from './simulation-client.js';
-import { FINISH, STEP, TIRE_RADIUS, RIM_RADIUS } from './vehicle-constants.js';
+import { FINISH, STEP } from './vehicle-constants.js';
 import { createExhaust } from './exhaust.js';
 import { groundHeight } from './terrain.js';
 import { drawClassicBody, drawWheelWells } from './car-art.js';
@@ -231,7 +231,7 @@ function car() {
     const b=local(i===0?-.7:.7,-.08);line([[X(b.x),Y(b.y)],[X(p.x),Y(p.y)]],'#344744',5);
   });
   sim.wheels.forEach((w,i)=>{
-    const hub=w.getPosition(),r=TIRE_RADIUS*scale,tire=sim.tires[i],outline=tire.getOutline();
+    const hub=w.getPosition(),tire=sim.tires[i],r=tire.outerRadius*scale,outline=tire.getOutline();
     // The rendered surface comes directly from the moving collision bodies.
     polygon(tire.nodes.map(n=>{const p=n.getPosition();return [X(p.x),Y(p.y)];}),'#202426');
     for(const node of tire.nodes){const p=node.getPosition();circle(X(p.x),Y(p.y),tire.skin*scale,'#202426');}
@@ -255,7 +255,7 @@ function car() {
     circle(0,0,r*.23,wheelLevel===1?'#766f60':'#c3c4b0',wheelLevel===1?'#99917d':'#e8e5d1',1);
     for(let j=0;j<4;j++){const a=j*Math.PI/2;circle(Math.cos(a)*r*.18,Math.sin(a)*r*.18,r*.035,'#4c574d','#d8d6c0',.6);}
     circle(0,0,r*.105,'#737f72','#d0d0b8',1);
-    drawRim(ctx,wheelLevel,RIM_RADIUS*scale);
+    drawRim(ctx,wheelLevel,tire.rimRadius*scale);
     line([[r*.43,0],[r*.49,0]],'#18271f',2); // valve breaks rotational symmetry
     ctx.restore();
     if(levels[4]>=3){
@@ -267,16 +267,16 @@ function car() {
   });
   ctx.save();ctx.translate(X(pos.x),Y(pos.y));ctx.rotate(-body.getAngle());ctx.scale(scale,-scale);
   drawClassicBody(ctx,xray,exhaust.soot,levels,garage.kits);ctx.restore();
-  const tip=sim.exhaustMount.point,pipe=local(-1.62,-.22),can=local(-1.87,-.24+sim.exhaustMount.offset*.7);
+  const tip=sim.exhaustMount.point,pipe=local(-1.68,-.42),can=local(-1.90,-.455+sim.exhaustMount.offset*.7);
   const pipeColor=['#6c5041','#786756','#979184','#a9b2ac','#b4bfbb','#ccd1c6','#7f7dba','#cc9a51'][levels[6]-1];
   line([[X(pipe.x),Y(pipe.y)],[X(can.x),Y(can.y)],[X(tip.x),Y(tip.y)]],pipeColor,3+levels[6]*.35);
   if(sim.boosting){
-    const flame=.18+.24*Math.abs(Math.sin(sim.elapsed*37)), tail=local(-2.12-flame,-.29);
+    const flame=.18+.24*Math.abs(Math.sin(sim.elapsed*37)), tail=local(-2.19-flame,-.50);
     polygon([[X(tip.x),Y(tip.y)-3],[X(tail.x),Y(tail.y)],[X(tip.x),Y(tip.y)+3]],'#79cfff');
     line([[X(tip.x),Y(tip.y)],[(X(tip.x)+X(tail.x))/2,(Y(tip.y)+Y(tail.y))/2]],'#fff0bd',2);
   }
   circle(X(can.x),Y(can.y),4,'#626d6b');
-  const hanger=local(-1.87,-.12);line([[X(hanger.x),Y(hanger.y)],[X(can.x),Y(can.y)]],'#343a37',2);
+  const hanger=local(-1.90,-.372);line([[X(hanger.x),Y(hanger.y)],[X(can.x),Y(can.y)]],'#343a37',2);
   circle(X(tip.x),Y(tip.y),1.9,'#151b1d');
   if(xray){
     const gearbox=local(.38,-.05),tail=local(-.87,-.16),nose=local(.88,-.09);

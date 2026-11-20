@@ -145,3 +145,15 @@ The header opens a test panel. Its garage uses session storage scoped to the cur
 Browser checks covered fresh garage, grade 4 (32/64), maximum (64/64), test wallet, reload, new game and a suspension upgrade along the rising diagonal. Returning to Career restored the observed 33/64 build, 14 coins, three diamonds and 439 m record. Regression tests cover all 50 symbol/line pairs, the held-column interaction, reset, legacy career reads and save isolation. Browser checks were performed on desktop.
 
 Verification passed all 38 tests in 455.90 s. Lint, production build and whitespace checks passed. The served HTML, CSS and game bundle matched the checked files byte-for-byte.
+
+## 2026-11-21 · Stock sedan and first-hill progression
+
+The new career starts with 610 mm road tires, 13-inch steel rims, 95 N·m of available axle torque and a nominal 7.7 km/h first transmission. The eight engine, transmission and wheel grades independently change available torque, target wheel speed and wheel geometry. Wheel changes rebuild both pressure chambers and their contact nodes around the existing moving hubs. The four registered body illustrations use the reel's fender atlas as their art reference. Local panel swaps, rims and bolt-on parts distinguish the eight body grades. Arch openings remain transparent over the live tire simulation.
+
+At 2.2 bar, full throttle, without nitro, the stock car reached 7.08–7.11 km/h on the flat start. Its maximum distance from the start in 26 simulated seconds was 12.99 m AWD, 13.30 m FWD and 13.30 m RWD. Each rolled back on the first rise. Raising only the engine to grade 2 reached 50.8 m in 30 s on AWD. With every grade at 8 and all three kits installed, all three drives finished 800 m without rolling over. Times from throttle application were 54.83 s AWD, 55.99 s FWD and 55.17 s RWD.
+
+On a flat road, the settled stock front tire deflected 46.7, 27.5 and 21.3 mm at 0.6, 2.2 and 3.2 bar. Changing from grade-1 to grade-8 wheels while driving at 7.59 m/s preserved forward travel. One second later both tires carried ground contacts and speed was 7.57 m/s. These are numerical gameplay measurements. The discrete tread contact span is not a calibrated pressure footprint.
+
+The desktop browser displayed the rusted and maximum-tune shells with independent rolling wheels, and responded to a D-key launch in a fresh test garage. The served HTML, both scripts and the body atlas matched the production files byte for byte.
+
+Final verification passed all 39 tests in 332.06 s, lint, production build and whitespace checks.

@@ -1,15 +1,15 @@
 // A damped hanger model driven by chassis acceleration and engine pulses.
-export function createExhaustMount(body) {
-  let offset=0,speed=0,time=0,previousVelocity=body.getLinearVelocityFromWorldPoint(body.getWorldPoint({x:-1.85,y:-.25}));
+export function createExhaustMount(body,tipX=-2.12,baseY=-.25) {
+  let offset=0,speed=0,time=0,previousVelocity=body.getLinearVelocityFromWorldPoint(body.getWorldPoint({x:-1.85,y:baseY}));
   return {
     get offset(){return offset;},
     get speed(){return speed;},
-    get tipLocal(){return {x:-2.12,y:-.25+offset};},
+    get tipLocal(){return {x:tipX,y:baseY+offset};},
     get point(){return body.getWorldPoint(this.tipLocal);},
     get velocity(){const v=body.getLinearVelocityFromWorldPoint(this.point),axis=body.getWorldVector({x:0,y:1});return {x:v.x+axis.x*speed,y:v.y+axis.y*speed};},
     step(dt,gas){
       time+=dt;
-      const v=body.getLinearVelocityFromWorldPoint(body.getWorldPoint({x:-1.85,y:-.25}));
+      const v=body.getLinearVelocityFromWorldPoint(body.getWorldPoint({x:-1.85,y:baseY}));
       const axis=body.getWorldVector({x:0,y:1});
       const acceleration=((v.x-previousVelocity.x)*axis.x+(v.y-previousVelocity.y)*axis.y)/dt;
       previousVelocity={x:v.x,y:v.y};

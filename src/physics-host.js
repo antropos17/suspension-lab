@@ -10,7 +10,7 @@ export function snapshot(sim) {
     wheels:sim.wheels.map(w=>({position:point(w.getPosition()),angle:w.getAngle()})),
     rims:sim.rims.map(r=>point(r.getPosition())),
     travel:sim.joints.map(j=>j.getJointTranslation()),
-    tires:sim.tires.map(t=>({skin:t.skin,pressureBar:t.pressureBar,nodes:t.nodes.map(n=>point(n.getPosition()))})),
+    tires:sim.tires.map(t=>({skin:t.skin,rimRadius:t.rimRadius,outerRadius:t.outerRadius,pressureBar:t.pressureBar,nodes:t.nodes.map(n=>point(n.getPosition()))})),
     exhaustMount:{point:point(sim.exhaustMount.point),velocity:point(sim.exhaustMount.velocity),offset:sim.exhaustMount.offset}
   };
 }

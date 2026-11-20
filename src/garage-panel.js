@@ -1,5 +1,4 @@
 import { PART_NAMES, THRESHOLDS, levelOf, buildSpec, SPECIALS } from './garage.js';
-import { TIRE_RADIUS } from './vehicle-constants.js';
 
 import { paintIcon } from './part-art.js';
 
@@ -19,8 +18,8 @@ export function createGaragePanel(left, right, title) {
   return function draw(garage, changes, reels) {
     const levels = garage.points.map(levelOf);
     const spec = buildSpec(levels,garage.kits);
-    const specs = [Math.round(spec.torque)+' Н·м', 'до '+(spec.wheelSpeed*TIRE_RADIUS*3.6).toFixed(0)+' км/ч',
-      'μ '+spec.friction.toFixed(2), (spec.damperLimit/1000).toFixed(2)+' кН',
+    const specs = [Math.round(spec.torque)+' Н·м', 'до '+(spec.wheelSpeed*spec.tireRadius*3.6).toFixed(0)+' км/ч',
+      'Ø '+Math.round(spec.tireRadius*200)+' см · μ '+spec.friction.toFixed(2), (spec.damperLimit/1000).toFixed(2)+' кН',
       spec.brakeTorque+' Н·м', finishes[levels[5]-1],
       spec.smokeFactor.toFixed(2)+'× копоть', spec.boostDuration.toFixed(1)+' с форсажа'];
     title.textContent = 'Сборка ' + levels.reduce((a,b)=>a+b,0) + ' / 64';
