@@ -191,3 +191,19 @@ footer {font-size:11px;color:#49565d}footer i {display:inline-block;width:8px}
   .recipes summary {min-height:36px;padding:9px 0}
   .part-info small {font-size:11px}
 }
+
+.slot-tile[data-ordered]::before {content:'Заказ';position:absolute;z-index:1;top:2px;left:2px;padding:1px 4px;background:#59363b;color:#fff4df;border-radius:2px;font:600 10px/1.25 system-ui;pointer-events:none}
+#finish-pay {margin:10px auto 0;padding:7px 14px;background:#f4ede1;border:1px solid #afa294;border-radius:4px}
+#finish-pay p {margin:0 0 5px;font-size:13px}
+#finish-pay dl {margin:0;display:flex;justify-content:center;gap:24px}
+#finish-pay dt {font-size:13px}
+#finish-pay dd {margin:0;font-weight:700;font-size:21px}
+@media(max-width:600px){
+  .drive-slot {grid-template-columns:minmax(0,1fr)}
+  .part-rack {grid-column:1}
+  .part-card {gap:12px;padding:9px 3px}
+  .part-card .part-icon {width:38px}
+  .part-info b {font-size:16px}
+  .part-info strong {font-size:14px}
+  .part-info small {margin:3px 0 5px;color:#eee9e4;font-size:14px;line-height:1.35}
+}

@@ -14,7 +14,10 @@
       <div class="route-hud"><div class="route"><div class="route-line"><span id="distance">0 / 800 м</span><b id="road-speed">0 км/ч</b></div><progress id="progress" max="800" value="0" aria-label="Пройденная дистанция"></progress></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
       <div id="notice" class="notice" role="status">Гараж · выезд направо</div>
       <div class="terrain-label" id="road-pay">До поста 5 м · +12 мон.</div>
-      <div id="overlay" class="overlay" hidden><div><p id="overlay-caption">Take a breath.</p><h2 id="overlay-title">Paused</h2><button id="resume">Keep driving</button></div></div>
+      <div id="overlay" class="overlay" hidden><div><p id="overlay-caption">Take a breath.</p><h2 id="overlay-title">Paused</h2><div id="finish-pay" hidden role="group" aria-labelledby="finish-pay-label">
+        <p id="finish-pay-label">Заработано за заезд</p>
+        <dl><div><dt>Монеты</dt><dd id="finish-coins">0</dd></div><div><dt>Алмазы</dt><dd id="finish-gems">0</dd></div></dl>
+      </div><button id="resume">Keep driving</button></div></div>
       <div class="pedals"><button id="nitro" data-control="nitro" aria-label="Нитро, удерживать N" aria-keyshortcuts="N">N₂O <b id="nitro-charge">100%</b></button><button data-control="reverse" aria-label="Назад">◀</button><button data-control="brake" class="brake" aria-label="Тормоз">Тормоз</button><button data-control="forward" aria-label="Газ">▶</button></div>
     </section>
     <section class="drive-slot" aria-labelledby="slot-title" lang="ru">

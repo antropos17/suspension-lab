@@ -34,35 +34,47 @@ let width = 1000, height = 500, scale = 64, hudAt=0, needsRedraw=true;
 let lastDrawnTime=-1,lastDrawAt=0;
 const keys = new Set(), touches = new Set();
 const slot = createDriveSlot();
-const drawSlot = createSlotPanel(slot, $('slot-bank'), $('spin'), $('slot-status'), $('slot-time'),()=>levels);
+let orderLabels=[];
+const drawSlot = createSlotPanel(slot, $('slot-bank'), $('spin'), $('slot-status'), $('slot-time'),()=>levels,()=>orderLabels);
 const testMode=new URLSearchParams(location.search).get('garage')==='test';
 const profile=createGarageProfile(testMode);
 let storageAvailable=true;
 let garage=profile.load(), levels=garage.points.map(levelOf), spec=buildSpec(levels,garage.kits);
 const fittings=[];
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const drawGarage = createGaragePanel($('rack-left'), $('rack-right'), $('build-level'));
+const drawCards = createGaragePanel($('rack-left'), $('rack-right'), $('build-level'));
 const drawShop=createShop($('shop-items'),$('wallet'),buyItem);
+function drawGarage(state,changes){
+  drawCards(state,changes);
+  orderLabels=PART_NAMES.map((_,part)=>{
+    const kit=SPECIALS.find((k,i)=>k.part===part && state.kitOrders[i]);
+    return [state.orders[part]?'двойное улучшение':'',kit?.name].filter(Boolean).join(' и ');
+  });
+  needsRedraw=true;
+}
 drawGarage(garage);drawShop(garage);
 let routePeak = garage.best, queuedPeak = garage.best, telemetryTime = 0, telemetrySpeed = 0;
 routePeak=Math.max(routePeak,profile.peak());
 $('best').textContent='Рекорд '+routePeak+' м';
-let collecting=false,roadReceipt='',receiptUntil=0;
-function collectRoadPay(meters){
+let earnings,roadReceipt='',receiptUntil=0;
+function collectRoadPay(meters,atFinish=false){
+  const run=earnings;
   const next=ROAD_STOPS[garage.roadStops];
-  if(collecting || !next || meters<next[0])return;
-  collecting=true;
+  if((run.pendingRoad && !atFinish) || !next || meters<next[0])return;
+  run.pendingRoad=true;
   Promise.resolve(transact(()=>{
     const pay=claimRoadStops(garage,meters);
-    if(!pay.coins)return;
+    if(!pay.coins && !pay.gems)return;
+    run.coins+=pay.coins;run.gems+=pay.gems;
+    drawShop(garage);
+    if(run!==earnings)return;
     roadReceipt='Пост '+garage.roadStops+' · +'+pay.coins+' мон.'+(pay.gems?' · +'+pay.gems+' алм.':'');
     receiptUntil=sim.elapsed+3;
-    drawShop(garage);
     if(!reduceMotion.matches){
       $('road-pay').animate([{transform:'translateY(5px)',opacity:.35},{transform:'translateY(0)',opacity:1}],{duration:200,easing:'ease-out'});
       $('wallet').animate([{transform:'translateY(0)'},{transform:'translateY(-3px)',offset:.4},{transform:'translateY(0)'}],{duration:240});
     }
-  })).finally(()=>{collecting=false;});
+  })).finally(()=>{run.pendingRoad=false;});
 }
 function flushDistance() { profile.savePeak(routePeak); }
 function refreshBuild(changes,installed=[],before) {
@@ -112,11 +124,13 @@ function buyItem(kind,index,expected) {
   });
 }
 function recordProgress(reward, meters) {
+  const run=earnings;
   queuedPeak=Math.max(queuedPeak,meters);
   return transact(()=>{
     const before=reward && buildSpec(garage.points.map(levelOf),garage.kits);
     const {changes,installed}=advanceGarage(garage,meters,reward);
     if(reward){
+      run.coins+=reward.coins;run.gems+=reward.gems;
       const receipts=refreshBuild(changes,installed,before);
       reward.fittedParts=[];
       for(const [i,count] of reward.matches.entries()){
@@ -145,6 +159,8 @@ const presets = { comfort: [1.3, .4], trail: [1.7, .5], sport: [2.6, .65] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
   if(routePeak > queuedPeak) recordProgress(null,routePeak);
+  earnings={coins:0,gems:0,pendingRoad:false};
+  $('finish-pay').hidden=true;
   telemetryTime = telemetrySpeed = 0;wheelSpray.reset();receiptUntil=0;roadReceipt='';
   fittings.length=0;
   slot.reset(); drawSlot(0, true);
@@ -416,12 +432,20 @@ function frame(now) {
     sim.advance(dt, sim.elapsed < slot.autoUntil ? 1 : Number(forward)-Number(reverse), brake, boost);
     accumulator=Math.min(.05,accumulator+Math.max(0,sim.elapsed-smokeTime));smokeTime=sim.elapsed;
     while(accumulator>=STEP-1e-10){exhaust.step(sim,STEP,spec.smokeFactor);wheelSpray.step(sim,STEP);accumulator-=STEP;}
-    collectRoadPay(sim.body.getPosition().x-3);
-    if(sim.body.getPosition().x>=FINISH+3){
+    const meters=sim.body.getPosition().x-3;
+    collectRoadPay(meters,meters>=FINISH);
+    if(meters>=FINISH){
       finished=true;
       const finalReward=slot.update(slot.ends,true);
       drawSlot(sim.elapsed,true);
-      recordProgress(finalReward,FINISH);
+      const completed=earnings;
+      // Wallet transactions share a FIFO lock. The final settlement follows all road payouts.
+      Promise.resolve(recordProgress(finalReward,FINISH)).then(()=>{
+        if(completed!==earnings)return;
+        $('finish-coins').textContent=completed.coins.toLocaleString('ru-RU');
+        $('finish-gems').textContent=completed.gems.toLocaleString('ru-RU');
+        $('finish-pay').hidden=false;
+      });
       clearInput();$('overlay').hidden=false;$('overlay-title').textContent='Финиш!';
       $('overlay-caption').textContent=`${FINISH} м пройдено за ${formatTime(sim.elapsed)}`;$('resume').textContent='Новый заезд';
     }

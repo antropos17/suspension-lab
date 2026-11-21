@@ -2,7 +2,7 @@ import { reelStopTime } from './drive-slot.js';
 import { SYMBOLS, coinText } from './garage.js';
 import { paintIcon } from './part-art.js';
 
-export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
+export function createSlotPanel(slot, bank, button, status, timer, getLevels, getOrders) {
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const columns=Array.from({length:3},(_,column)=>{
     const reel=document.createElement('button'), strip=document.createElement('div');
@@ -24,12 +24,13 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
   const marks=overlay.getContext('2d');
   // Keep winning symbols in their original finish until the next spin.
   let spinLevels,previousLevels;
-  let lastPhase,lastParts,lastHeld,lastLocked,lastLevels,lastTime,lastReceipt;
+  let lastOrders,lastPhase,lastParts,lastHeld,lastLocked,lastLevels,lastTime,lastReceipt;
   return (now,locked)=>{
     const {phase,parts,previous,result}=slot, rolling=phase==='rolling', levels=getLevels();
+    const orders=getOrders();
     if(rolling && lastPhase!=='rolling'){previousLevels=spinLevels ?? levels;spinLevels=levels;}
     if(!result)spinLevels=levels;
-    const changed=phase!==lastPhase || parts!==lastParts || lastHeld!==slot.held || locked!==lastLocked || levels!==lastLevels;
+    const changed=orders!==lastOrders || phase!==lastPhase || parts!==lastParts || lastHeld!==slot.held || locked!==lastLocked || levels!==lastLevels;
     if(changed){
       marks.clearRect(0,0,300,300);
       if(!rolling && result){
@@ -63,6 +64,11 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
           const id=pos<3 ? previous[pos*3+col] : pos>=12 ? parts[(pos-12)%3*3+col] : (pos*3+col*7)%SYMBOLS.length;
           const artLevels=rolling && pos<3 ? previousLevels : spinLevels;
           paintIcon(tile.firstChild,id,artLevels?.[id] ?? 1);
+          const order=orders[id] || '';
+          if(tile.title!==order){
+            tile.title=order;
+            tile.toggleAttribute('data-ordered',!!order);
+          }
           if(changed){
             tile.dataset.result=row<3&&!rolling ? parts[index] : '';
             const winning=row<3 && !rolling && !!result?.lines.some(line=>line.includes(index));
@@ -79,7 +85,9 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
           reel.setAttribute('aria-pressed',held);
           const action=held?'Снять удержание':'Удержать на следующий спин';
           reel.title=reel.disabled?'':action;
-          reel.setAttribute('aria-label','Барабан '+(col+1)+' · '+(rolling?'вращается':[0,1,2].map(r=>SYMBOLS[parts[r*3+col]]).join(', '))+(reel.disabled?'':'. '+action));
+          reel.setAttribute('aria-label','Барабан '+(col+1)+' · '+(rolling?'вращается':[0,1,2].map(r=>{
+            const id=parts[r*3+col];return SYMBOLS[id]+(orders[id]?' (заказ: '+orders[id]+')':'');
+          }).join(', '))+(reel.disabled?'':'. '+action));
         }
       });
     }
@@ -100,6 +108,6 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
       result ? result.name+(result.coins?' · +'+coinText(result.coins):'')+(result.gems?' · +'+result.gems+' алм.':'')+(result.receipt?' · '+result.receipt:'') : 'Три одинаковых на линии — установка детали.';
     const time=now<slot.autoUntil ? Math.ceil(Math.max(0,slot.autoUntil-now)*10)/10 : null;
     if(time!==lastTime) timer.textContent=time===null ? '' : 'Газ · '+time.toFixed(1)+' с';
-    lastTime=time;lastPhase=phase;lastParts=parts;lastHeld=slot.held;lastLocked=locked;lastLevels=levels;lastReceipt=result?.receipt;
+    lastOrders=orders;lastTime=time;lastPhase=phase;lastParts=parts;lastHeld=slot.held;lastLocked=locked;lastLevels=levels;lastReceipt=result?.receipt;
   };
 }
