@@ -8,6 +8,14 @@ export function createSimulationClient(worker=new Worker('/physics-worker.js')) 
   let state, generation=0, pending=false, accumulator=0, settings={};
   const client={ready:false,error:null,workerMs:0};
   const playback=createSnapshotPlayback();
+  let throttle=0,brake=false,nitro=false;
+  function sendPendingSteps(){
+    if(!client.ready||client.error||pending)return;
+    const steps=Math.min(6,Math.floor((accumulator+1e-10)/STEP));
+    if(!steps)return;
+    accumulator-=steps*STEP;pending=true;
+    worker.postMessage({type:'step',generation,steps,throttle,brake,nitro,settings:{...settings}});
+  }
   const body={
     getPosition:()=>state.body.position,
     getAngle:()=>state.body.angle,
@@ -38,20 +46,18 @@ export function createSimulationClient(worker=new Worker('/physics-worker.js')) 
     setPressure(pressure){settings.pressure=pressure;},
     tune(frequency,damping){settings.frequency=frequency;settings.damping=damping;},
     suspend(){accumulator=0;},
-    advance(dt,throttle,brake,nitro=false){
+    advance(dt,nextThrottle,nextBrake,nextNitro=false){
       if(!client.ready||client.error)return;
+      throttle=nextThrottle;brake=nextBrake;nitro=nextNitro;
       playback.advance(dt);
       accumulator=Math.min(STEP*6,accumulator+Math.max(0,dt));
-      const steps=Math.min(6,Math.floor((accumulator+1e-10)/STEP));
-      if(pending||!steps)return;
-      accumulator-=steps*STEP;pending=true;
-      worker.postMessage({type:'step',generation,steps,throttle,brake,nitro,settings:{...settings}});
+      sendPendingSteps();
     },
     dispose(){worker.terminate();}
   });
   // Getters must stay live: Object.assign would evaluate them prematurely.
   for(const key of ['launchSeconds','hundredSeconds'])Object.defineProperty(client,key,{get:()=>state?.[key]??null});
-  for(const key of ['elapsed','engineLoad','wheelPowerKW','accelerator','dirt','spray','wetKind','exhaustMount','nitroCharge','boosting'])Object.defineProperty(client,key,{get:()=>state?.[key]??(key==='exhaustMount'?null:0),configurable:true});
+  for(const key of ['elapsed','engineLoad','wheelPowerKW','engineRPM','accelerator','dirt','spray','wetKind','exhaustMount','nitroCharge','boosting'])Object.defineProperty(client,key,{get:()=>state?.[key]??(key==='exhaustMount'?null:0),configurable:true});
   Object.defineProperty(client,'bufferMs',{get:()=>playback.bufferMs});
   Object.defineProperty(client,'renderHolds',{get:()=>playback.holds});
   worker.onmessage=({data})=>{
@@ -61,6 +67,9 @@ export function createSimulationClient(worker=new Worker('/physics-worker.js')) 
     if(!client.ready){playback.reset(data.state);state=playback.state;}
     else playback.push(data.frames??[data.state]);
     client.workerMs=data.workerMs;client.ready=true;
+    // Under load the next input is already buffered. Let the worker start as
+    // soon as it is free, without waiting for another display refresh.
+    if(accumulator>=STEP-1e-10)queueMicrotask(sendPendingSteps);
   };
   worker.onerror=event=>{client.error=event.message||'Physics worker failed';client.ready=false;};
   return client;

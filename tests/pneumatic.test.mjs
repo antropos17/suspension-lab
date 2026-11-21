@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {World,Vec2,Circle} from 'planck';
+import {World,Vec2,Circle,DistanceJoint} from 'planck';
 import {createPneumaticTire,RIM_RADIUS} from '../src/pneumatic-tire.js';
+import {TreadLink} from '../src/tread-link.js';
 import {createBench} from './tire-bench-helper.mjs';
 
 test('gas pressure and load change actual tread geometry and supported hub height',()=>{
@@ -44,3 +45,18 @@ test('pressure and elastic links conserve net linear and angular momentum in fre
  assert.ok(Math.hypot(px,py)<1e-5);assert.ok(Math.abs(L)<1e-5);
 });
 
+
+test('the tread link matches a Planck soft distance joint with a rotating off-centre anchor',()=>{
+  function run(Link,offset){
+    const world=new World(Vec2(0,-9.81));
+    const a=world.createDynamicBody(Vec2(0,1)),b=world.createDynamicBody({position:Vec2(.6,1.2),fixedRotation:true});
+    a.createFixture(new Circle(.1),{density:24});b.createFixture(new Circle(.05),{density:16});
+    a.setAngularVelocity(2.8);b.setLinearVelocity(Vec2(.2,.5));
+    const joint=world.createJoint(new Link({frequencyHz:16,dampingRatio:.65},a,b,a.getWorldPoint(Vec2(offset,.03)),b.getPosition()));
+    joint.setLength(.45);
+    for(let i=0;i<240;i++)world.step(i%2?1/960:1/720,8,4);
+    return [a.getAngle(),a.getAngularVelocity(),...([a,b].flatMap(body=>[body.getPosition().x,body.getPosition().y,body.getLinearVelocity().x,body.getLinearVelocity().y]))];
+  }
+  const reference=run(DistanceJoint,.12),optimized=run(TreadLink,.12);
+  reference.forEach((v,i)=>assert.ok(Math.abs(v-optimized[i])<1e-9));
+});

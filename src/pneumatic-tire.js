@@ -1,6 +1,7 @@
-import {Vec2,Circle,DistanceJoint} from 'planck';
+import {Vec2,Circle} from 'planck';
 
 import { TIRE_RADIUS, RIM_RADIUS } from './vehicle-constants.js';
+import { TreadLink } from './tread-link.js';
 export { TIRE_RADIUS, RIM_RADIUS } from './vehicle-constants.js';
 export const ATMOSPHERE=101325;
 // 2D pneumatic carcass. Rigid contact beads are elastically linked, not a rigid
@@ -12,7 +13,7 @@ export function createPneumaticTire(world,rim,{pressure=2.2,count=32,outerRadius
  let inflation=pressure;
  const group=-2; // tire nodes do not collide with one another or the rim
  const link=(a,b,anchorA,anchorB,hz,damping,length)=>{
-  const j=world.createJoint(new DistanceJoint({frequencyHz:hz,dampingRatio:damping,collideConnected:false},a,b,anchorA,anchorB));
+  const j=world.createJoint(new TreadLink({frequencyHz:hz,dampingRatio:damping,collideConnected:false},a,b,anchorA,anchorB));
   if(length!==undefined)j.setLength(length);links.push(j);return j;
  };
  for(let i=0;i<count;i++){

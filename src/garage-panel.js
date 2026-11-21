@@ -33,7 +33,7 @@ export function createGaragePanel(left, right, title) {
         changes && previous!==value ? 'было '+previous : '';
       field.textContent=value;
     }
-    const specs = [ratings.power+' л.с.', 'до '+(spec.topSpeed*3.6).toFixed(0)+' км/ч',
+    const specs = [ratings.power+' л.с. при '+spec.ratedRPM+' об/мин', 'до '+(spec.topSpeed*3.6).toFixed(0)+' км/ч',
       'Ø '+Math.round(spec.tireRadius*200)+' см · μ '+spec.friction.toFixed(2), (spec.damperLimit/1000).toFixed(2)+' кН',
       spec.brakeTorque+' Н·м', finishes[levels[5]-1],
       spec.smokeFactor.toFixed(2)+'× копоть', spec.boostDuration.toFixed(1)+' с форсажа'];

@@ -64,3 +64,19 @@ test('client bounds queued work, discards old resets and forwards latest drive/p
  client.advance(.001,1,false);client.suspend();client.advance(.001,1,false);assert.equal(sent.length,0);
  worker.onerror({message:'test worker failure'});assert.equal(client.error,'test worker failure');assert.equal(client.ready,false);
 });
+
+test('worker completion immediately drains bounded input accumulated between display frames',async()=>{
+ const sent=[],worker={postMessage:m=>sent.push(m),terminate(){}};
+ const client=createSimulationClient(worker);
+ let reply;const host=createPhysicsHost(m=>{reply=m;});
+ client.reset(config);host(sent.shift());worker.onmessage({data:reply});
+ client.advance(STEP,1,false);const first=sent.shift();
+ client.advance(STEP*2,-1,true);
+ assert.equal(sent.length,0);
+ host(first);worker.onmessage({data:reply});
+ await Promise.resolve();
+ assert.deepEqual(sent.map(({steps,throttle,brake})=>[steps,throttle,brake]),[[2,-1,true]]);
+ client.advance(STEP*2,1,false);
+ const second=sent.shift();host(second);worker.onmessage({data:reply});client.suspend();
+ await Promise.resolve();assert.equal(sent.length,0);
+});

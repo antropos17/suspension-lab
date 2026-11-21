@@ -4,10 +4,24 @@ import { FINISH } from './vehicle-constants.js';
 const rect=(c,x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
 function line(c,points,color,width=1){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.strokeStyle=color;c.lineWidth=width;c.stroke();}
 function ellipse(c,x,y,rx,ry,color){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.PI*2);c.fillStyle=color;c.fill();}
+// One period of the promenade. Camera movement only translates the cached artwork.
+function makeRail(){
+ const tile=document.createElement('canvas');tile.width=432;tile.height=120;
+ const c=tile.getContext('2d');c.scale(2,2);
+ rect(c,0,50,216,9,'#b4a58b');line(c,[[0,50],[216,50]],'#e2d8c3',2);
+ for(let x=0;x<216;x+=12){
+  rect(c,x,40,2,10,'#9b9b8e');ellipse(c,x+1,45,1.8,3,'#b7b3a1');
+ }
+ line(c,[[0,39],[216,39]],'#d8d3c1',2);
+ line(c,[[108,50],[108,2]],'#3c5359',2);
+ line(c,[[100,10],[108,3],[116,10]],'#3c5359',1.5);
+ for(const x of [100,116]){ellipse(c,x,10,3,4,'#ecdfbc');line(c,[[x-3,6],[x+3,6]],'#3c5359',1);}
+ return tile;
+}
 export function createBakuBackdrop(invalidate=()=>{}){
  const panorama=new Image();panorama.src='/assets/baku-panorama.png';panorama.decoding='async';
  panorama.onload=invalidate;
- const wash=document.createElement('canvas');let cachedWidth=0,cachedHeight=0,twilight;
+ const wash=document.createElement('canvas'),rail=makeRail();let cachedWidth=0,cachedHeight=0,twilight;
  return function drawBaku(c,{width,height,camera,scale}){
   const unit=Math.max(.65,Math.min(1.3,height/440));
   const lift=Math.max(-12,Math.min(12,(camera.y-1.1)*scale*.025));
@@ -36,18 +50,9 @@ export function createBakuBackdrop(invalidate=()=>{}){
     c.drawImage(panorama,0,64,panorama.naturalWidth,panorama.naturalHeight-64,-offset,top+skyH,w,h-skyH);
    }else c.drawImage(panorama,-offset,top,w,h);
   }
-  const walk=base+48*unit;
-  rect(c,0,walk,width,9*unit,'#b4a58b');line(c,[[0,walk],[width,walk]],'#e2d8c3',2*unit);
-  const step=108*unit,period=step*2,offset=((camera.x-3)*scale*.16%period+period)%period;
-  for(let x=-offset;x<width+step;x+=step){
-   for(let j=0;j<9;j++){const xx=x+j*12*unit;rect(c,xx,walk-10*unit,2*unit,10*unit,'#9b9b8e');ellipse(c,xx+unit,walk-5*unit,1.8*unit,3*unit,'#b7b3a1');}
-   line(c,[[x,walk-11*unit],[x+step,walk-11*unit]],'#d8d3c1',2*unit);
-   if(Math.round((x+offset)/step)%2===0){
-    line(c,[[x,walk],[x,walk-48*unit]],'#3c5359',2*unit);
-    line(c,[[x-8*unit,walk-40*unit],[x,walk-47*unit],[x+8*unit,walk-40*unit]],'#3c5359',1.5*unit);
-    for(const sign of [-1,1]){ellipse(c,x+sign*8*unit,walk-40*unit,3*unit,4*unit,'#ecdfbc');line(c,[[x+sign*11*unit,walk-44*unit],[x+sign*5*unit,walk-44*unit]],'#3c5359',unit);}
-   }
-  }
+  const walk=base+48*unit,period=216*unit;
+  const offset=((camera.x-3)*scale*.16%period+period)%period;
+  for(let x=-period/2-offset;x<width;x+=period)c.drawImage(rail,x,walk-50*unit,period,60*unit);
   rect(c,0,0,width,height,twilight);
  };
 }

@@ -1,5 +1,5 @@
 import { createSimulationClient } from './simulation-client.js';
-import { FINISH, STEP, metricHP } from './vehicle-constants.js';
+import { FINISH, STEP, metricHP, DRIVELINE_EFFICIENCY } from './vehicle-constants.js';
 import { createExhaust } from './exhaust.js';
 import { createRoadScene } from './road-scene.js';
 import { createWheelSpray } from './wheel-spray.js';
@@ -30,6 +30,7 @@ const profileOutput=profiling?document.body.appendChild(document.createElement('
 if(profileOutput){profileOutput.id='frame-profile';profileOutput.hidden=true;}
 let sim, paused = false, finished = false, xray = false, drive = 'awd', accumulator = 0, last = performance.now(), camera = { x: 3, y: 1.4 };
 let width = 1000, height = 500, scale = 64, hudAt=0, needsRedraw=true;
+let lastDrawnTime=-1,lastDrawAt=0;
 const keys = new Set(), touches = new Set();
 const slot = createDriveSlot();
 const drawSlot = createSlotPanel(slot, $('slot-bank'), $('spin'), $('slot-status'), $('slot-time'),()=>levels);
@@ -389,10 +390,16 @@ function frame(now) {
   const pos=sim.body.getPosition();
   // Horizontal follow uses the same interpolated pose as every car component.
   // A lagging camera fighting discontinuous worker poses caused lateral shake.
-  camera.x=pos.x;camera.y+=(pos.y-camera.y)*(1-Math.exp(-dt*3));
-  scenery();const sceneryEnd=profiling?performance.now():0;drawExhaust();const smokeEnd=profiling?performance.now():0;car();wheelSpray.draw(ctx,X,Y,scale,groundHeight);
-  needsRedraw=false;
-  if(profiling)profileOutput.dataset.draws=String(++drawCount);
+  let sceneryEnd=physicsEnd,smokeEnd=physicsEnd;
+  if(needsRedraw || sim.elapsed!==lastDrawnTime){
+    const cameraDt=Math.min(.05,Math.max(0,(now-lastDrawAt)/1000));
+    camera.x=pos.x;camera.y+=(pos.y-camera.y)*(1-Math.exp(-cameraDt*3));
+    scenery();if(profiling)sceneryEnd=performance.now();
+    drawExhaust();if(profiling)smokeEnd=performance.now();
+    car();wheelSpray.draw(ctx,X,Y,scale,groundHeight);
+    needsRedraw=false;lastDrawnTime=sim.elapsed;lastDrawAt=now;
+    if(profiling)profileOutput.dataset.draws=String(++drawCount);
+  }
   const signedSpeed=sim.body.getLinearVelocity().x, speedKmh=Math.abs(signedSpeed)*3.6;
   const needleDegrees=185+Math.min(120,speedKmh)*170/120;
   speedNeedle.style.transform='rotate('+needleDegrees.toFixed(2)+'deg)';
@@ -404,9 +411,11 @@ function frame(now) {
   $('time').textContent=formatTime(sim.elapsed);
   $('hundred-time').textContent=sim.hundredSeconds===null ? '—' : sim.hundredSeconds.toFixed(2).replace('.',',');
   const power=sim.wheelPowerKW;
+  $('engine-rpm').textContent=String(Math.round(sim.engineRPM/10)*10);
   $('launch-time').textContent=sim.launchSeconds===null ? '—' : sim.launchSeconds.toFixed(2).replace('.',',');
   $('power-live').textContent=metricHP(power).toFixed(1).replace('.',',');
-  $('power-fill').style.transform='scaleX('+Math.min(1,power/spec.powerKW)+')';
+  const wheelCeiling=Math.min(spec.powerKW*DRIVELINE_EFFICIENCY,spec.fittedTorque*spec.wheelSpeed/1000);
+  $('power-fill').style.transform='scaleX('+Math.min(1,power/wheelCeiling)+')';
   routePeak = Math.max(routePeak, Math.floor(distance));
   if (routePeak >= queuedPeak+25) recordProgress(null,routePeak);
   $('best').textContent = 'Рекорд '+routePeak+' м';

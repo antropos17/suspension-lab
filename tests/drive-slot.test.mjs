@@ -209,3 +209,26 @@ test('the 0–100 clock records the physical crossing from rest on a fully tuned
   }
   assert.fail('top build did not reach 100 km/h');
 });
+
+test('rated crank power and integrated driven-axle work use distinct physical units',()=>{
+  for(let level=1;level<=8;level++){
+    const spec=buildSpec(Array(8).fill(level));
+    assert.equal(spec.powerKW,spec.ratedTorque*spec.ratedRPM*(2*Math.PI/60)/1000);
+    assert.ok(spec.powerKW>=21 && spec.powerKW<130);
+  }
+  const sim=createSimulation({levels:Array(8).fill(1),drive:'rwd',heightAt:()=>0});
+  for(let i=0;i<120;i++)sim.step();
+  assert.equal(sim.wheelPowerKW,0);
+  assert.ok(Math.abs(sim.engineRPM-850)<1);
+  let previousAngle=0,work=0;
+  const motor=sim.motors[0];
+  sim.world.on('pre-step',()=>{previousAngle=motor.getJointAngle();});
+  sim.world.on('post-step',dt=>{
+    work+=motor.getMotorTorque(1/dt)*(motor.getJointAngle()-previousAngle);
+  });
+  let measured=0;
+  for(let i=0;i<300;i++){sim.step(1);measured+=sim.wheelPowerKW*1000*STEP;}
+  assert.ok(sim.engineRPM>1500);
+  assert.ok(work>50 && Math.abs(measured-work)<.025*work);
+  sim.step(0,true);assert.equal(sim.wheelPowerKW,0);
+});

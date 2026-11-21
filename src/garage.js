@@ -96,9 +96,12 @@ export function buildSpec([engine, transmission, wheels, suspension, brakes, bod
   const torque = axleTorque * kitFactor;
   const referenceRadius = .305; // Stock final drive is the catalog reference.
   const topSpeed = [2.15,4.22,6.29,8.36,10.43,15.5,22,33][transmission-1];
+  // Crank torque at rated speed, before clutch slip and final drive losses.
+  const ratedTorque = [60,75,90,105,124,146,172,200][engine-1]*kitFactor;
+  const ratedRPM = [3500,3900,4250,4600,5000,5350,5750,6100][engine-1];
   return {
-    tireRadius, rimRadius, torque, topSpeed,
-    powerKW: [.7, 2.8, 7.5, 14, 24, 37, 55, 82][engine-1] * kitFactor,
+    tireRadius, rimRadius, torque, topSpeed, ratedTorque, ratedRPM,
+    powerKW: ratedTorque*ratedRPM*(2*Math.PI/60)/1000,
     driveForce: torque / referenceRadius,
     fittedTorque: torque * tireRadius / referenceRadius,
     aero: Math.max(0,body-4)/4,

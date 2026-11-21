@@ -4,7 +4,7 @@
 const mix=(a,b,t)=>a+(b-a)*t;
 function point(out,a,b,t){out.x=mix(a.x,b.x,t);out.y=mix(a.y,b.y,t);}
 function blend(out,a,b,t){
-  for(const key of ['elapsed','engineLoad','wheelPowerKW','accelerator','nitroCharge','dirt'])out[key]=mix(a[key],b[key],t);
+  for(const key of ['elapsed','engineLoad','wheelPowerKW','engineRPM','accelerator','nitroCharge','dirt'])out[key]=mix(a[key],b[key],t);
   out.boosting=t<.5?a.boosting:b.boosting;
   out.launchSeconds=t<1?a.launchSeconds:b.launchSeconds;
   out.hundredSeconds=t<1?a.hundredSeconds:b.hundredSeconds;

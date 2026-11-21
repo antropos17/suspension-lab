@@ -6,8 +6,9 @@ import { createExhaustMount } from './exhaust-mount.js';
 import { buildSpec } from './garage.js';
 export { terrainHeight } from './terrain.js';
 
-import { STEP, TIRE_RADIUS } from './vehicle-constants.js';
+import { STEP, TIRE_RADIUS, DRIVELINE_EFFICIENCY } from './vehicle-constants.js';
 export { FINISH, STEP } from './vehicle-constants.js';
+const GEAR_RATIOS=[13.2,8.1,5.55,4.05];
 
 export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd', pressure = 2.2, nodeCount = 32, substeps = 8, heightAt = terrainHeight, levels, kits } = {}) {
   substeps=Math.max(substeps,Math.ceil(nodeCount/32)*8);
@@ -97,7 +98,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   body.setAngularDamping(.6+.95*spec.aero);
   const exhaustMount = levels ? createExhaustMount(body,-2.19,-.46) : createExhaustMount(body);
   let elapsed = 0;
-  let wheelPowerKW = 0, engineLoad = 0, accelerator = 0;
+  let wheelPowerKW = 0, engineLoad = 0, accelerator = 0, engineRPM=850;
   let dirt=0;
   const spray=[0,0], wetKind=['',''];
   // Viscous shear on immersed tread elements; wheel slip stirs the layer even at low body speed.
@@ -156,6 +157,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
     get launchSeconds() { return launchSeconds; },
     get hundredSeconds() { return hundredSeconds; },
     get wheelPowerKW() { return wheelPowerKW; },
+    get engineRPM() { return engineRPM; },
     get engineLoad() { return engineLoad; },
     get accelerator() { return accelerator; },
     get nitroCharge() { return nitroCharge; },
@@ -173,12 +175,28 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
       }
       const boost=boosting ? spec.boostFactor : 1;
       accelerator += (Math.abs(throttle) - accelerator) * (1 - Math.exp(-STEP * 6));
+      let axleBudget=spec.fittedTorque, wheelBudgetKW=spec.powerKW;
+      if(spec.ratedRPM){
+        const rear=Math.abs(motors[0].getJointSpeed()),front=Math.abs(motors[1].getJointSpeed());
+        const shaft=drive==='awd'?(rear+front)/2:drive==='rwd'?rear:front;
+        const wheelRPM=shaft*60/(2*Math.PI);
+        const tireRatio=spec.tireRadius/.305;
+        const gear=(GEAR_RATIOS.find(r=>wheelRPM*r*tireRatio<=spec.ratedRPM)??GEAR_RATIOS.at(-1))*tireRatio;
+        // A slipping launch clutch lets the crank turn while the wheels are nearly stationary.
+        const targetRPM=Math.max(850+(brake?0:850*accelerator),wheelRPM*gear);
+        engineRPM+=(targetRPM-engineRPM)*(1-Math.exp(-STEP*12));
+        const speedRatio=Math.min(1,engineRPM/spec.ratedRPM);
+        const curve=speedRatio<.68 ? .65+.5*speedRatio/.68 : 1+.15*(1-speedRatio)/.32;
+        const crankTorque=spec.ratedTorque*curve;
+        axleBudget=Math.min(axleBudget,crankTorque*gear*DRIVELINE_EFFICIENCY);
+        wheelBudgetKW=Math.min(spec.powerKW,crankTorque*engineRPM*(2*Math.PI/60)/1000)*DRIVELINE_EFFICIENCY;
+      }
       motors.forEach((j, i) => {
         const powered = drive === 'awd' || (drive === 'rwd' ? i === 0 : i === 1);
         const rollingSpeed=Math.abs(body.getLinearVelocity().x)/spec.tireRadius;
         j.setMotorSpeed(brake ? 0 : -throttle * Math.min(spec.wheelSpeed,rollingSpeed+spec.launch*boost));
-        const powerLimitedTorque = spec.powerKW*1000/Math.max(.01,Math.abs(j.getJointSpeed()));
-        const available = Math.min(spec.fittedTorque,powerLimitedTorque)*boost / (drive==='awd'?2:1);
+        const powerLimitedTorque = wheelBudgetKW*1000/Math.max(.01,Math.abs(j.getJointSpeed()));
+        const available = Math.min(axleBudget,powerLimitedTorque)*boost / (drive==='awd'?2:1);
         const driving = Math.abs(throttle)>.01;
         // The free axle coasts. The small holding torque only acts with the pedal released.
         j.setMaxMotorTorque(brake ? spec.brakeTorque : driving ? (powered ? available : 0) : 12);
@@ -188,10 +206,17 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
       const h=STEP/substeps;
       const onSoftRoad=heightAt===terrainHeight && wheels.some(w=>poolAt(w.getPosition().x));
       if(!onSoftRoad){spray.fill(0);wetKind.fill('');}
+      let shaftWork=0;
+      const transmitting=throttle!==0 && !brake;
       for(let i=0;i<substeps;i++){
+        const rearSpeed=transmitting?motors[0].getJointSpeed():0,frontSpeed=transmitting?motors[1].getJointSpeed():0;
         if(onSoftRoad)roadForces(h);
         if(downforce)body.applyForceToCenter(Vec2(0,-downforce),true);
         suspensionForces();tires.forEach(t=>t.applyPressure());world.step(h,8,4);
+        if(transmitting){
+          if(drive!=='fwd')shaftWork+=motors[0].getMotorTorque(1/h)*(rearSpeed+motors[0].getJointSpeed())*.5*h;
+          if(drive!=='rwd')shaftWork+=motors[1].getMotorTorque(1/h)*(frontSpeed+motors[1].getJointSpeed())*.5*h;
+        }
       }
       const newSpeed=body.getLinearVelocity().x;
       if(newSpeed<-.04 || ((brake || throttle<=0) && Math.abs(newSpeed)<.04))launchStarted=null;
@@ -208,8 +233,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
         launchStarted=null;
       }
       const torque = motors.reduce((sum,j)=>sum+Math.abs(j.getMotorTorque(1/h)),0);
-      wheelPowerKW = brake || !throttle ? 0 : motors.reduce((sum,j)=>
-        sum+Math.max(0,j.getMotorTorque(1/h)*j.getJointSpeed()),0)/1000;
+      wheelPowerKW=Math.max(0,shaftWork)/(STEP*1000);
       engineLoad += ((brake || !throttle ? 0 : Math.min(1, torque / spec.fittedTorque)) - engineLoad) * .04;
       exhaustMount.step(STEP,accelerator);
       elapsed += STEP;

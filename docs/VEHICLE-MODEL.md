@@ -121,3 +121,11 @@ Stock axle torque is 1850 N·m, motor launch allowance 4.3 rad/s, and stock gear
 ## Wet asphalt and mud
 
 The contact edge material sets friction to 0.95 on dry asphalt, 0.68 under standing water and 0.40 on muddy beds. The solver applies opposing viscous forces to submerged tread nodes and adds longitudinal ploughing resistance at the axle proportional to immersion. Tire motion in contact with the layer drives spray, mud deposition and washing. The free surface stays level over a fixed roadbed. The model does not simulate rut formation, bulk fluid displacement or hydroplaning.
+
+## 2026-11-21 · Crankshaft rating, clutch and measured wheel power
+
+The eight tuning stages now specify torque at rated crank speed. Catalog power in kW is torque in N·m times angular speed in rad/s, divided by 1000. The stock engine is 60 N·m at 3500 rpm (29.9 metric hp); the top engine is 200 N·m at 6100 rpm (173.7 hp before the compressor). These are gameplay engines, without a measured dynamometer curve.
+
+The drive model estimates crank speed from the powered hubs, four stepped ratios, and an idle/launch speed floor for clutch slip. Available wheel torque is constrained by the engine torque curve, 86% driveline efficiency, the fitted axle torque limit and the wheel-speed governor. The stock clutch and driveline transmit at most 95 N·m at the reference tire radius; the first gearbox tops out near 8 km/h. The pressure-driven tire nodes still deliver traction at the road. Live wheel power integrates torque times angular displacement on the powered joints across all eight substeps. Overrun gives no positive driving output. Force, crankshaft rating, actual axle output and gearing are separate readings.
+
+The tire link uses Planck's soft distance constraint, specialized for a centre-mounted, fixed-rotation contact bead at its B end. The A end can be an offset anchor on a rotating rim. Initialization reuses one direction vector, and the velocity loop updates scalar components in place. It preserves the effective mass, spring softness, warm start and reciprocal linear/angular impulses. This specialization depends on the pinned Planck 1.5.1 solver fields. A varying-timestep regression compares it directly against the generic joint. The eight 960 Hz substeps, iteration counts and all tread colliders remain active.
