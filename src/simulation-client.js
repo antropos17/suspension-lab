@@ -50,7 +50,8 @@ export function createSimulationClient(worker=new Worker('/physics-worker.js')) 
     dispose(){worker.terminate();}
   });
   // Getters must stay live: Object.assign would evaluate them prematurely.
-  for(const key of ['elapsed','engineLoad','accelerator','exhaustMount','nitroCharge','boosting'])Object.defineProperty(client,key,{get:()=>state?.[key]??(key==='exhaustMount'?null:0),configurable:true});
+  Object.defineProperty(client,'launchSeconds',{get:()=>state?.launchSeconds??null});
+  for(const key of ['elapsed','engineLoad','wheelPowerKW','accelerator','exhaustMount','nitroCharge','boosting'])Object.defineProperty(client,key,{get:()=>state?.[key]??(key==='exhaustMount'?null:0),configurable:true});
   Object.defineProperty(client,'bufferMs',{get:()=>playback.bufferMs});
   Object.defineProperty(client,'renderHolds',{get:()=>playback.holds});
   worker.onmessage=({data})=>{

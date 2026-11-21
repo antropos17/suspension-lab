@@ -3,27 +3,52 @@
 <head>
   <link rel="preload" as="image" href="assets/sedan-shells.webp">
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#34444f"><title>Suspension Lab — Бакинский гараж</title>
+  <meta name="theme-color" content="#285346"><link rel="icon" href="assets/garage-mark.png" type="image/png"><title>Suspension Lab — Бакинский гараж</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main>
-    <header><div class="brand"><div><h1>Бакинский гараж</h1><p>Прибрежная трасса · 800 м</p></div></div><div class="header-actions"><a id="admin-link" href="#admin">Админ-панель</a><button id="pause" aria-keyshortcuts="P">Пауза <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Новый заезд <kbd>R</kbd></button></div></header>
+    <header><div class="brand"><img src="assets/garage-mark.png" width="63" height="48" alt=""><div><h1>Бакинский гараж</h1><p>Прибрежная трасса · 800 м</p></div></div><div class="header-actions"><a id="admin-link" href="#admin">Админ-панель</a><button id="pause" aria-keyshortcuts="P">Пауза <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Новый заезд <kbd>R</kbd></button></div></header>
     <section class="stage" aria-label="Заезд по Баку">
       <canvas id="game" aria-label="Седан на прибрежной трассе в Баку. D — газ, A — задний ход, пробел — тормоз."></canvas>
-      <div class="hud"><div><strong id="speed">0</strong><span>км/ч</span></div><div class="route"><span id="distance">0 / 800 м</span><progress id="progress" max="800" value="0" aria-label="Пройденная дистанция"></progress><span id="acceleration">0.0 м/с²</span></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
+      <div class="route-hud"><div class="route"><span id="distance">0 / 800 м</span><progress id="progress" max="800" value="0" aria-label="Пройденная дистанция"></progress></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
       <div id="notice" class="notice" role="status">До брусчатки 55 м</div>
       <div class="terrain-label">Bakı bulvarı</div>
       <div id="overlay" class="overlay" hidden><div><p id="overlay-caption">Take a breath.</p><h2 id="overlay-title">Paused</h2><button id="resume">Keep driving</button></div></div>
       <div class="pedals"><button id="nitro" data-control="nitro" aria-label="Нитро, удерживать N" aria-keyshortcuts="N">N₂O <b id="nitro-charge">100%</b></button><button data-control="reverse" aria-label="Назад">◀</button><button data-control="brake" class="brake" aria-label="Тормоз">Тормоз</button><button data-control="forward" aria-label="Газ">▶</button></div>
     </section>
+    <div class="instruments">
+      <section class="cluster" aria-labelledby="cluster-title">
+        <div class="instrument-heading"><h2 id="cluster-title">Приборная панель</h2><span id="drive-readout">Полный привод</span></div>
+        <div class="instruments-live">
+          <div class="speedometer" aria-label="Скорость">
+            <svg viewBox="0 0 180 92" aria-hidden="true" class="speed-dial"><path class="dial-marks" d="M14.29 75.38L24.25 76.25 M14.99 69.78L19.92 70.59 M16.10 64.26L20.96 65.43 M17.62 58.83L22.38 60.35 M19.53 53.53L24.17 55.40 M21.84 48.39L30.81 52.81 M24.52 43.43L28.82 45.96 M27.55 38.68L31.66 41.53 M30.94 34.17L34.82 37.32 M34.64 29.93L38.29 33.35 M38.66 25.97L45.41 33.34 M42.95 22.32L46.04 26.24 M47.50 18.99L50.30 23.14 M52.29 16.02L54.77 20.36 M57.28 13.40L59.43 17.92 M62.45 11.17L66.08 20.49 M67.78 9.32L69.24 14.10 M73.23 7.87L74.33 12.75 M78.77 6.83L79.51 11.78 M84.37 6.21L84.74 11.20 M90.00 6.00L90.00 16.00 M95.63 6.21L95.26 11.20 M101.23 6.83L100.49 11.78 M106.77 7.87L105.67 12.75 M112.22 9.32L110.76 14.10 M117.55 11.17L113.92 20.49 M122.72 13.40L120.57 17.92 M127.71 16.02L125.23 20.36 M132.50 18.99L129.70 23.14 M137.05 22.32L133.96 26.24 M141.34 25.97L134.59 33.34 M145.36 29.93L141.71 33.35 M149.06 34.17L145.18 37.32 M152.45 38.68L148.34 41.53 M155.48 43.43L151.18 45.96 M158.16 48.39L149.19 52.81 M160.47 53.53L155.83 55.40 M162.38 58.83L157.62 60.35 M163.90 64.26L159.04 65.43 M165.01 69.78L160.08 70.59 M165.71 75.38L155.75 76.25"/><g class="dial-numbers"><text x="35.21" y="77.21">0</text><text x="52.84" y="41.45">20</text><text x="90.00" y="27.00">40</text><text x="127.16" y="41.45">60</text><text x="144.79" y="77.21">80</text></g><g id="speed-needle"><path d="M80 80 158 81.5 158 82.5 80 84Z"/><circle cx="90" cy="82" r="4"/></g></svg>
+            <div class="dial-readout"><b id="speed">0</b><span>км/ч</span></div>
+          </div>
+          <dl class="live-meters">
+            <div><dt>Ускорение</dt><dd><b id="acceleration">0,0</b> м/с²<div class="scale-strip bipolar" aria-hidden="true"><i id="accel-fill"></i></div></dd></div>
+          <div><dt>Мощность сейчас</dt><dd><b id="power-live">0,0</b> кВт<div class="scale-strip" aria-hidden="true"><i id="power-fill"></i></div></dd></div>
+          <div class="launch-clock"><dt>Разгон 0–5 км/ч</dt><dd><b id="launch-time">—</b> с</dd></div></dl>
+        </div>
+      </section>
+      <section class="build-sheet" aria-labelledby="spec-title"><h2 id="spec-title">Характеристики машины</h2>
+        <dl class="rating-list">
+          <div class="rating"><dt><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h3l2-3h8l2 3h3v9h-4l-1 2H8l-3-4H3zM10 3h5m-2 0v3M1 11v5"/></svg>Мощность на колёсах</dt><dd><strong id="stat-power">0</strong> <small>кВт</small><span class="was"></span></dd></div>
+          <div class="rating"><dt><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 15h4l2-5h7l2 3h4v4h-2m-5 0H9"/><circle cx="7" cy="17" r="2"/><circle cx="16" cy="17" r="2"/><path d="M3 5h11m-3-3 3 3-3 3"/></svg>Стартовая тяга</dt><dd><strong id="stat-force">0</strong> <small>Н</small><span class="was"></span></dd></div>
+          <div class="rating"><dt><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18a9 9 0 1 1 18 0zM12 14l5-6M5 12l2 1M12 5v2"/></svg>Предел коробки</dt><dd><strong id="stat-speed">0</strong> <small>км/ч</small><span class="was"></span></dd></div>
+          <div class="rating"><dt><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6zM6 5l6 4 6-4M6 10l6 4 6-4M6 15l6 4 6-4"/></svg>Сцепление шин, μ</dt><dd><strong id="stat-grip">0</strong> <span class="was"></span></dd></div>
+          <div class="rating"><dt><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="13" r="8"/><circle cx="11" cy="13" r="3"/><path d="M14 3q7 1 7 9l-4 1q0-5-4-6z"/></svg>Момент тормозов</dt><dd><strong id="stat-brake">0</strong> <small>Н·м</small><span class="was"></span></dd></div>
+          <div class="rating"><dt><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="15" rx="4"/><path d="M10 7V3h4v4M9 2h6m-2 8-3 5h4l-3 5"/></svg>Запас нитро</dt><dd><strong id="stat-nitro">0</strong> <small>с</small><span class="was"></span></dd></div>
+        </dl>
+      </section>
+    </div>
     <section class="drive-slot" aria-labelledby="slot-title" lang="ru">
       <div class="part-rack" id="rack-left" aria-label="Силовая установка и колёса"></div>
       <div class="reel-console">
         <div class="slot-heading"><h2 id="slot-title">Барабаны мастерской</h2><span id="build-level"></span></div>
         <div class="slot-machine"><div class="slot-bank" id="slot-bank" role="group" aria-label="Три барабана по три символа"></div>
         <div class="slot-controls"><div id="wallet" aria-label="Кошелёк"></div>
-          <button id="spin" aria-keyshortcuts="S" disabled>Крутить и ехать <kbd>S</kbd></button>
+          <button id="spin" aria-keyshortcuts="S" disabled><svg aria-hidden="true" width="19" height="15" viewBox="0 0 24 19" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="1" y="5" width="17" height="12" rx="2"/><path d="M7 6v10m5-10v10m6-3h3V5"/><circle cx="21" cy="3" r="1.7"/></svg> Крутить и ехать <kbd>S</kbd></button>
           <div class="spin-receipt"><span id="slot-status" role="status">Три одинаковых на линии — установка детали.</span> <span id="slot-time"></span></div>
         </div></div>
         <details class="recipes"><summary>Выигрышные линии</summary>
@@ -40,8 +65,8 @@
     <details class="manual-settings"><summary>Настройки шасси и привода</summary>
     <section class="workbench" aria-label="Suspension settings">
       <div class="intro"><h2>Настройка шасси</h2><p>Давление и демпфирование можно менять на ходу.</p><button id="xray" aria-pressed="false">Показать шасси</button><div class="soot-control"><label for="soot">Копоть <output id="soot-value">3.0x</output></label><input id="soot" type="range" min="0" max="6" step="0.1" value="3"><div class="range-labels"><span>Нет</span><span>Много</span></div></div></div>
-      <div class="tuning"><label for="spring">Жёсткость пружин <output id="spring-value">1.7 Hz</output></label><input id="spring" type="range" min="1.1" max="4" value="1.7" step="0.1"><div class="range-labels"><span>Мягче</span><span>Жёстче</span></div><label for="damping">Демпфирование <output id="damping-value">0.50</output></label><input id="damping" type="range" min="0.1" max="1.2" value="0.50" step="0.05"><div class="range-labels"><span>Свободнее</span><span>Плотнее</span></div><label for="pressure">Давление шин <output id="pressure-value">2.2 bar</output></label><input id="pressure" type="range" min="0.6" max="3.2" value="2.2" step="0.1"><div class="range-labels"><span>Холодная шина</span><span>Жёстче</span></div><small id="pressure-live">Rear 2.20 / Front 2.20 bar</small></div>
-      <div class="setup"><span>Привод</span><div class="drive-options" role="group" aria-label="Drive type"><button data-drive="fwd" aria-pressed="false">Передний</button><button data-drive="rwd" aria-pressed="false">Задний</button><button data-drive="awd" class="selected" aria-pressed="true">Полный</button></div><span>Настройки</span><div class="presets"><button data-preset="comfort">Комфорт</button><button data-preset="trail" class="selected">Трасса</button><button data-preset="sport">Спорт</button></div><div class="suspension-readout"><span>Rear <meter id="rear" min="-0.6" max="0.6" value="0" aria-label="Rear suspension travel"></meter></span><span>Front <meter id="front" min="-0.6" max="0.6" value="0" aria-label="Front suspension travel"></meter></span></div></div>
+      <div class="tuning"><label for="spring">Жёсткость пружин <output id="spring-value">1.7 Hz</output></label><input id="spring" type="range" min="1.1" max="4" value="1.7" step="0.1"><div class="range-labels"><span>Мягче</span><span>Жёстче</span></div><label for="damping">Демпфирование <output id="damping-value">0.50</output></label><input id="damping" type="range" min="0.1" max="1.2" value="0.50" step="0.05"><div class="range-labels"><span>Свободнее</span><span>Плотнее</span></div><label for="pressure">Давление шин <output id="pressure-value">2.2 bar</output></label><input id="pressure" type="range" min="0.6" max="3.2" value="2.2" step="0.1"><div class="range-labels"><span>Холодная шина</span><span>Жёстче</span></div><small id="pressure-live">Задние 2,20 / Передние 2,20 бар</small></div>
+      <div class="setup"><span>Привод</span><div class="drive-options" role="group" aria-label="Drive type"><button data-drive="fwd" aria-pressed="false">Передний</button><button data-drive="rwd" aria-pressed="false">Задний</button><button data-drive="awd" class="selected" aria-pressed="true">Полный</button></div><span>Настройки</span><div class="presets"><button data-preset="comfort">Комфорт</button><button data-preset="trail" class="selected">Трасса</button><button data-preset="sport">Спорт</button></div><div class="suspension-readout"><span>Задняя <meter id="rear" min="-0.6" max="0.6" value="0" aria-label="Rear suspension travel"></meter></span><span>Передняя <meter id="front" min="-0.6" max="0.6" value="0" aria-label="Front suspension travel"></meter></span></div></div>
     </section>
     </details>
     <details id="admin" class="admin-panel">

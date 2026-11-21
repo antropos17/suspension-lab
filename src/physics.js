@@ -24,7 +24,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
     if (i < points.length - 1) edge.setNextVertex(points[i + 1]);
     ground.createFixture(edge, { friction: .95 });
   }
-  let spec = levels ? buildSpec(levels,kits) : {tireRadius:TIRE_RADIUS,rimRadius:RIM_RADIUS,torque:2400,launch:5,wheelSpeed:22,friction:1.5,damperLimit:3000,brakeTorque:1600,boostDuration:1.6,boostFactor:1.34,aero:0};
+  let spec = levels ? buildSpec(levels,kits) : {tireRadius:TIRE_RADIUS,rimRadius:RIM_RADIUS,torque:2400,fittedTorque:2400,powerKW:Infinity,launch:5,wheelSpeed:22,friction:1.5,damperLimit:3000,brakeTorque:1600,boostDuration:1.6,boostFactor:1.34,aero:0};
   const hubY = levels ? spec.tireRadius + .05 : .57;
   const body = world.createDynamicBody({ position: Vec2(3, levels ? hubY + .52 : 1.26), angularDamping: .6 });
   body.createFixture(new Box(1.8, .32), { density: 180, friction: .4, filterGroupIndex: -1,filterCategoryBits:8,filterMaskBits:1 });
@@ -63,6 +63,8 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   });
   const tires = wheels.map(w=>makeTire(w,spec,pressure));
   let nitroCharge=1, boosting=false;
+  let launchStarted=null, launchSeconds=null;
+  const launchTarget=5/3.6;
   function setBuild(nextLevels, nextKits) {
     const next = buildSpec(nextLevels,nextKits);
     if (next.tireRadius !== spec.tireRadius) {
@@ -83,13 +85,14 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
         tires[i]=makeTire(wheel,next,old.inflationBar);
       });
     }
+    launchStarted=null;launchSeconds=null;
     spec = next;
     body.setAngularDamping(.6+.95*spec.aero);
   }
   body.setAngularDamping(.6+.95*spec.aero);
   const exhaustMount = levels ? createExhaustMount(body,-2.19,-.46) : createExhaustMount(body);
   let elapsed = 0;
-  let engineLoad = 0, accelerator = 0;
+  let wheelPowerKW = 0, engineLoad = 0, accelerator = 0;
   function suspensionForces() {
     joints.forEach((joint, i) => {
       const travel = joint.getJointTranslation(), speed = joint.getJointSpeed();
@@ -113,6 +116,8 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   return {
     world, body, wheels, rims, joints, tires, stops, points, exhaustMount, motors, setBuild,
     get elapsed() { return elapsed; },
+    get launchSeconds() { return launchSeconds; },
+    get wheelPowerKW() { return wheelPowerKW; },
     get engineLoad() { return engineLoad; },
     get accelerator() { return accelerator; },
     get nitroCharge() { return nitroCharge; },
@@ -134,7 +139,11 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
         const powered = drive === 'awd' || (drive === 'rwd' ? i === 0 : i === 1);
         const rollingSpeed=Math.abs(body.getLinearVelocity().x)/spec.tireRadius;
         j.setMotorSpeed(brake ? 0 : -throttle * Math.min(spec.wheelSpeed,rollingSpeed+spec.launch*boost));
-        j.setMaxMotorTorque(brake ? spec.brakeTorque : Math.abs(throttle) > .01 && powered ? spec.torque*boost / (drive === 'awd' ? 2 : 1) : 12);
+        const powerLimitedTorque = spec.powerKW*1000/Math.max(.01,Math.abs(j.getJointSpeed()));
+        const available = Math.min(spec.fittedTorque,powerLimitedTorque)*boost / (drive==='awd'?2:1);
+        const driving = Math.abs(throttle)>.01;
+        // The free axle coasts. The small holding torque only acts with the pedal released.
+        j.setMaxMotorTorque(brake ? spec.brakeTorque : driving ? (powered ? available : 0) : 12);
       });
       const speed=body.getLinearVelocity().x;
       const downforce=(spec.aero || 0)*1.8*speed*speed;
@@ -143,8 +152,20 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
         if(downforce)body.applyForceToCenter(Vec2(0,-downforce),true);
         suspensionForces();tires.forEach(t=>t.applyPressure());world.step(h,8,4);
       }
+      const newSpeed=body.getLinearVelocity().x;
+      if(throttle<=0 || brake || newSpeed<-.04)launchStarted=null;
+      else if(launchStarted===null && Math.abs(speed)<.04){
+        launchStarted=elapsed;launchSeconds=null;
+      }
+      if(launchStarted!==null && speed<launchTarget && newSpeed>=launchTarget){
+        const fraction=(launchTarget-speed)/(newSpeed-speed);
+        launchSeconds=elapsed+fraction*STEP-launchStarted;
+        launchStarted=null;
+      }
       const torque = motors.reduce((sum,j)=>sum+Math.abs(j.getMotorTorque(1/h)),0);
-      engineLoad += ((brake || !throttle ? 0 : Math.min(1, torque / spec.torque)) - engineLoad) * .04;
+      wheelPowerKW = brake || !throttle ? 0 : motors.reduce((sum,j)=>
+        sum+Math.max(0,j.getMotorTorque(1/h)*j.getJointSpeed()),0)/1000;
+      engineLoad += ((brake || !throttle ? 0 : Math.min(1, torque / spec.fittedTorque)) - engineLoad) * .04;
       exhaustMount.step(STEP,accelerator);
       elapsed += STEP;
     }

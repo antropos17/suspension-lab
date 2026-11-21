@@ -3,12 +3,12 @@
   font-family: Bahnschrift, "Segoe UI", sans-serif;
   font-synthesis: none;
   font-variant-numeric: tabular-nums;
-  color: #28343d;
-  background: #dbdedc;
-  --ink: #28343d;
-  --steel: #374957;
+  color: #252c26;
+  background: #dfdfd5;
+  --ink: #252c26;
+  --steel: #2d4239;
   --paper: #eee5d3;
-  --amber: #f2bf76;
+  --amber: #e6bf69;
   --edge: #73808a;
 }
 * { box-sizing: border-box }
@@ -16,7 +16,7 @@ body { margin: 0 }
 main { max-width: 1320px; margin: auto; padding: 14px clamp(10px,2.4vw,34px) 18px }
 button, input, output { font: inherit }
 button, summary { cursor: pointer }
-button { border: 1px solid #86939a; border-radius: 4px; color: inherit; background: #edf0ec; padding: 8px 12px }
+button { border: 1px solid #86939a; border-radius: 4px; color: inherit; background: #efefe7; padding: 8px 12px }
 button:hover:enabled { background: #fffaf0 }
 button:disabled { cursor: default }
 button:focus-visible, summary:focus-visible, input:focus-visible { outline: 3px solid #c57c35; outline-offset: 3px }
@@ -27,42 +27,39 @@ h1 { font-size:clamp(23px,3vw,35px); letter-spacing:-.04em; line-height:1.08; fo
 .brand p { font-size:12px; color:#4e606a; margin:3px 0 }
 .header-actions button { font-size:13px }
 kbd { font: inherit; font-size:.83em; padding:1px 4px; border:1px solid currentColor; border-radius:3px; opacity:.78 }
-.stage { position:relative; isolation:isolate; height:clamp(250px,42vh,490px); min-height:min(28vw,370px); overflow:hidden; border:2px solid #4c5b64; border-bottom:0; border-radius:9px 9px 0 0; background:#9aaab7 }
+.stage { position:relative; isolation:isolate; height:clamp(250px,42vh,490px); min-height:min(28vw,370px); overflow:hidden; border:2px solid #4e584d; border-bottom:0; border-radius:9px 9px 0 0; background:#9aaab7 }
 #game { width:100%;height:100%;display:block }
-.hud { position:absolute; top:12px; left:14px; right:14px; display:flex; align-items:flex-start; gap:11px; pointer-events:none }
-.hud>div { background:#edf0e6ee; border-bottom:2px solid #849097; padding:5px 9px; border-radius:3px }
-.hud>div:first-child { display:flex; align-items:baseline; gap:5px; min-width:84px }
-.hud strong { font-size:32px;line-height:1;letter-spacing:-.055em;font-weight:600 }
-.hud span,.hud small { font-size:11px }
-.hud .route { display:grid;gap:2px;min-width:122px }
-.hud .timer { display:grid;gap:1px;margin-left:auto;text-align:right }
-.timer span { font-size:18px;line-height:1 }
-.timer small,.route #acceleration { color:#53626a;font-size:10px }
+/* Only course readings float above the windshield. */
+.route-hud {position:absolute;inset:12px 14px auto;display:flex;justify-content:space-between;align-items:start;pointer-events:none}
+.route-hud>div {background:#252b25e8;color:#faf5de;border-radius:3px;padding:5px 9px}
+.route-hud .route,.route-hud .timer {display:grid;gap:3px}
+.route-hud .route {font-size:13px;min-width:105px}
+.timer {text-align:right;font-size:15px}.timer small {font-size:10px;color:#dcdccf}
 progress { width:100%;height:3px;appearance:none;border:0;background:#89959b55 }
 progress::-webkit-progress-bar { background:#89959b55 }
 progress::-webkit-progress-value { background:#b27b3d }
-.notice,.terrain-label { position:absolute;left:15px;color:white;background:#34424ad9;padding:3px 7px;border-radius:2px;font-size:11px }
-.notice { top:64px }.notice:empty{display:none}
+.notice,.terrain-label { position:absolute;left:15px;color:white;background:#30382cdd;padding:3px 7px;border-radius:2px;font-size:11px }
+.notice { top:52px }.notice:empty{display:none}
 .terrain-label { bottom:12px;letter-spacing:.025em }
-.overlay { position:absolute;z-index:3;inset:0;display:grid;place-items:center;text-align:center;background:#cbd2d3db }
+.overlay { position:absolute;z-index:3;inset:0;display:grid;place-items:center;text-align:center;background:#deded1e8 }
 .overlay[hidden] { display:none }
 .overlay h2 { font-size:36px }.overlay p { font-size:14px }.overlay button { margin-top:12px }
 .pedals { position:absolute;bottom:10px;right:12px;display:flex;gap:5px;touch-action:none }
 .pedals button { min-width:43px;min-height:38px;padding:5px 10px;touch-action:none;user-select:none;background:#e4e6dcf2;border-color:#8a9499;color:#253541 }
 .pedals .held,.pedals button.active {background:var(--amber)}
 #nitro {font-weight:650}#nitro b {display:block;font-size:10px}
-.drive-slot { display:grid;grid-template-columns:minmax(155px,1fr) minmax(285px,1.6fr) minmax(155px,1fr);gap:13px clamp(12px,2vw,27px);align-items:center;padding:16px clamp(12px,2vw,25px) 0;background:var(--steel);color:#f2f0e6;border:2px solid #4c5b64;border-top:4px solid #9ba4a6;border-radius:0 0 8px 8px }
+.drive-slot { display:grid;grid-template-columns:minmax(155px,1fr) minmax(285px,1.6fr) minmax(155px,1fr);gap:13px clamp(12px,2vw,27px);align-items:center;padding:16px clamp(12px,2vw,25px) 0;background:var(--steel);color:#f2f0e6;border:2px solid #4e584d;border-top:1px solid #677769;border-radius:0 0 8px 8px }
 .part-rack {display:grid;align-content:center;min-width:0}
-.part-card {position:relative;display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid #60707c}
+.part-card {position:relative;display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid #516357}
 .part-card:last-child {border-bottom:0}
 .part-icon,.slot-tile i {display:block;aspect-ratio:1;background-color:var(--paper);background-repeat:no-repeat}
 .part-icon {width:38px;flex:none;border-radius:3px}
 .part-info {flex:1;min-width:0}.part-info b{font-size:14px;font-weight:550}.part-info strong{font-size:11px;font-weight:500;color:var(--amber);white-space:nowrap}
 .part-info small {display:block;font-size:11px;color:#dae1df;margin:2px 0}
-.part-info progress {display:block;height:3px;background:#52636f}.part-info progress::-webkit-progress-value {background:#cfa069}
+.part-info progress {display:block;height:3px;background:#536154}.part-info progress::-webkit-progress-value {background:#c6ad72}
 .reel-console {min-width:0}.slot-heading {margin-bottom:8px;align-items:baseline}.slot-heading h2 {font-size:clamp(16px,1.6vw,22px);letter-spacing:-.034em}.slot-heading span {font-size:11px;color:#d4dddd;white-space:nowrap}
 .slot-machine {display:grid;grid-template-columns:auto minmax(0,160px);justify-content:center;align-items:center;gap:clamp(9px,1.2vw,17px)}
-.slot-bank {--cell:clamp(46px,8.3vh,72px);position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;width:calc(3 * var(--cell) + 14px);padding:5px;background:#263641;border:1px solid #8a989e;border-radius:6px}
+.slot-bank {--cell:clamp(46px,8.3vh,72px);position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;width:calc(3 * var(--cell) + 14px);padding:5px;background:#252d27;border:1px solid #8a989e;border-radius:6px}
 .slot-reel {display:block;position:relative;overflow:hidden;height:calc(3 * var(--cell));padding:0;border:0;border-radius:2px;background:var(--paper)}
 .slot-reel[aria-pressed=true]::after {content:'Фикс';position:absolute;z-index:2;bottom:0;left:0;right:0;color:#302216;background:var(--amber);font-size:10px;line-height:13px}
 .slot-strip {height:100%}.slot-tile {height:33.333333%;position:relative;display:grid;place-items:center;overflow:hidden;container-type:size;background:var(--paper);border-bottom:1px solid #b4a992}
@@ -74,21 +71,21 @@ progress::-webkit-progress-value { background:#b27b3d }
 #wallet {flex-wrap:wrap;gap:5px 12px}
 #wallet i {width:19px;border-radius:50%}
 #wallet b {font-size:12px;font-weight:500}
-#spin {min-height:42px;background:var(--amber);border:1px solid #c38b4b;border-bottom:3px solid #9c6939;color:#352d24;font-weight:650;font-size:14px}
-#spin:hover:enabled {background:#f8cd90}#spin:active:enabled{transform:translateY(1px)}#spin:disabled{background:#c1ac88}
+#spin {min-height:42px;background:var(--amber);border:1px solid #c39e56;border-bottom:3px solid #847044;color:#352d24;font-weight:650;font-size:14px}
+#spin:hover:enabled {background:#eed492}#spin:active:enabled{transform:translateY(1px)}#spin:disabled{background:#c1ac88}
 .spin-receipt {min-height:3em;color:#ebece4;font-size:12px;line-height:1.35}
 #slot-time {display:block;color:var(--amber)}
-.recipes,.tuning-shop {font-size:12px}.recipes {margin-top:7px;color:#d1d9dc}
+.recipes,.tuning-shop {font-size:12px}.recipes {margin-top:7px;color:#d5d9ca}
 details p {font-size:13px;line-height:1.45;max-width:72ch;margin:7px 0}
-.tuning-shop {grid-column:1/-1;padding:0 0 8px;border-top:1px solid #697985}
+.tuning-shop {grid-column:1/-1;padding:0 0 8px;border-top:1px solid #697769}
 .tuning-shop summary {padding:8px 0 0;font-size:14px}
 #shop-items {display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:5px}
 #shop-items button {display:flex;align-items:center;text-align:left;gap:8px;background:#f0ede1;color:var(--ink);padding:6px}
 #shop-items button:disabled {background:#cbd1cf;color:#49555a}
 #shop-items small {display:block;font-size:11px;margin-top:3px}#shop-notice {margin-top:4px}
 .fit-chip {position:fixed;width:36px;z-index:20;pointer-events:none}.fit-tag {position:absolute;right:0;bottom:1px;background:var(--amber);color:var(--ink);font-size:11px;padding:3px 5px;border-radius:2px}
-.manual-settings {margin:12px 0;font-size:14px}.workbench {display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:25px;margin:14px 0}.workbench h2 {font-size:22px}.workbench input{width:100%;accent-color:#526878}
-.workbench label,.workbench .range-labels,.suspension-readout {display:flex;justify-content:space-between;gap:8px}.workbench .range-labels,.workbench small {font-size:11px}.intro button,.soot-control,.tuning label,.setup>span,.suspension-readout {margin-top:10px}.setup>span{display:block}.setup button{padding:6px;font-size:12px}.selected,.intro [aria-pressed=true] {background:#435866;color:white}.suspension-readout meter{width:50px}
+.manual-settings {margin:12px 0;font-size:14px}.workbench {display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:25px;margin:14px 0}.workbench h2 {font-size:22px}.workbench input{width:100%;accent-color:#506953}
+.workbench label,.workbench .range-labels,.suspension-readout {display:flex;justify-content:space-between;gap:8px}.workbench .range-labels,.workbench small {font-size:11px}.intro button,.soot-control,.tuning label,.setup>span,.suspension-readout {margin-top:10px}.setup>span{display:block}.setup button{padding:6px;font-size:12px}.selected,.intro [aria-pressed=true] {background:#365748;color:white}.suspension-readout meter{width:50px}
 footer {font-size:11px;color:#49565d}footer i {display:inline-block;width:8px}
 @media(max-width:780px){
   .drive-slot{grid-template-columns:1fr 1fr;gap:8px 14px}
@@ -98,7 +95,7 @@ footer {font-size:11px;color:#49565d}footer i {display:inline-block;width:8px}
 }
 @media(max-width:480px){
   main{padding:8px}.header-actions button{font-size:11px;padding:7px}.header-actions kbd,#spin kbd{display:none}
-  .stage{height:32vh;min-height:220px}.terrain-label{display:none}.hud{left:7px;right:7px;top:7px;gap:4px}.hud>div{padding:4px}.hud>div:first-child{min-width:61px}.hud strong{font-size:26px}.hud .route{min-width:87px}
+  .stage{height:32vh;min-height:220px}.terrain-label{display:none}.route-hud{inset:7px 8px auto}
   .drive-slot{padding:10px 9px 0}.part-card{gap:5px}.part-info b{font-size:12px}.part-info small{font-size:10px}.part-icon{width:24px}.slot-bank{--cell:44px}.slot-heading h2{font-size:19px}
   .workbench{grid-template-columns:1fr}.setup{grid-column:auto}
 }
@@ -108,6 +105,56 @@ footer {font-size:11px;color:#49565d}footer i {display:inline-block;width:8px}
 .admin-panel {padding:10px 0;border-top:1px solid #a4afaf;margin:8px 0 12px;font-size:14px;scroll-margin:12px}
 .admin-panel summary {font-weight:600}.admin-panel p {margin:8px 0 4px}
 .admin-actions {display:flex;align-items:end;flex-wrap:wrap;gap:8px;margin-top:12px}
-.admin-actions label {display:grid;gap:3px;font-size:12px}.admin-actions select {font:inherit;font-size:14px;padding:7px;color:var(--ink);border:1px solid #86939a;border-radius:4px;background:#edf0ec}
+.admin-actions label {display:grid;gap:3px;font-size:12px}.admin-actions select {font:inherit;font-size:14px;padding:7px;color:var(--ink);border:1px solid #86939a;border-radius:4px;background:#efefe7}
 #test-max {background:var(--amber)}#admin-status {display:block;margin-top:7px}
 @media(max-width:480px){header{flex-wrap:wrap}.header-actions{flex-wrap:wrap}.admin-actions button{padding:7px;font-size:12px}}
+
+
+/* Enamel cluster and the specification plate share one mounting rail. */
+.brand {display:flex;align-items:center;gap:10px}
+.brand img {flex:none;width:clamp(43px,5vw,66px);height:auto}
+.brand h1 {color:#254839;font-weight:750;letter-spacing:-.045em}
+.instruments {display:grid;grid-template-columns:minmax(310px,.93fr) minmax(380px,1.35fr);border:2px solid #4e584d;border-top:0}
+.cluster,.build-sheet {padding:10px clamp(12px,1.65vw,24px)}
+.cluster {background:#30332c;color:#f2eedc;border-top:3px solid #55584d}
+.instrument-heading {display:flex;align-items:center;justify-content:space-between;gap:12px}
+.instruments h2 {font-size:16px;font-weight:650;letter-spacing:-.015em}
+#drive-readout {font-size:11px;color:#d2d4bc}
+.instruments-live {display:grid;grid-template-columns:minmax(112px,.93fr) minmax(135px,1fr);align-items:center;gap:18px;margin-top:8px}
+.speedometer {position:relative;background:#e6e0c9;border:3px solid #8d9180;border-radius:52% 52% 9px 9px / 82% 82% 10px 10px;box-shadow:0 0 0 2px #20251f;overflow:hidden;max-width:190px;width:100%;justify-self:center;color:#30372c}
+.speed-dial {display:block;width:100%;height:auto}
+.dial-marks {stroke:#545949;stroke-width:1.35;fill:none}
+.dial-numbers {font:700 10px Bahnschrift,Arial,sans-serif;text-anchor:middle;dominant-baseline:middle;fill:#414737}
+#speed-needle {fill:#a8412a}
+.dial-readout {position:absolute;left:50%;top:52%;transform:translateX(-50%);display:flex;align-items:baseline;gap:3px;line-height:1;pointer-events:none}
+.dial-readout b {font-size:clamp(18px,2.3vw,29px)}.dial-readout span {font-size:10px}
+.live-meters,.rating-list,.live-meters dd,.rating-list dd {margin:0}
+.live-meters {display:grid;gap:6px}
+.live-meters>div:has(.scale-strip) {position:relative;padding-bottom:7px}
+.live-meters .scale-strip {position:absolute;bottom:0;left:0;right:0}
+.launch-clock {padding-top:3px;border-top:1px solid #555a4c}
+.live-meters>div {display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:2px 5px}
+.live-meters dt {color:#d7d9c9;font-size:12px}.live-meters dd {font-size:11px;white-space:nowrap}.live-meters b {font-size:18px;font-weight:550}
+.scale-strip {grid-column:1/-1;position:relative;height:5px;background:#555a4c}
+.scale-strip i {display:block;height:100%;width:0;background:#d0b572}
+.bipolar::after {content:'';position:absolute;top:-2px;bottom:-2px;left:50%;width:1px;background:#eee9d8}.bipolar i {position:absolute}
+.build-sheet {background:#e9e7d8;border-top:3px solid #acae9f;color:#30372e}
+.rating-list {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 18px;margin-top:8px}
+.rating dt {font-size:11px;display:flex;align-items:center;gap:5px;color:#494f44;line-height:1.15}
+.rating dt svg {width:16px;height:16px;stroke:#54674e;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.6;fill:none;flex:none}
+.rating dd {line-height:1.1;padding-left:21px}.rating strong {font-size:20px;font-weight:620}.rating small {font-size:11px;color:#434b40}.was {font-size:10px;color:#376047;margin-left:5px;display:inline-block}
+@media(max-width:780px){
+  .instruments{grid-template-columns:minmax(230px,.85fr) 1.1fr}
+  .instruments-live{gap:8px;grid-template-columns:minmax(91px,.8fr) minmax(115px,1fr)}
+  .rating-list{gap:8px}.rating dd{padding-left:0}.rating dt svg{width:13px;height:13px}
+}
+@media(max-width:600px){
+  .instruments{grid-template-columns:1fr}
+  .cluster,.build-sheet{padding:8px 12px}
+  .instruments-live{grid-template-columns:minmax(100px,130px) 1fr;gap:22px;margin-top:3px}
+  .rating-list{gap:7px 10px}.rating strong{font-size:17px}
+  .build-sheet h2,.cluster h2{font-size:15px}
+  .brand{gap:5px}.brand img{width:42px}.stage{min-height:220px}
+}
+
+#spin svg {vertical-align:-2px;margin-right:2px}

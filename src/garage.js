@@ -77,12 +77,18 @@ export function buildSpec([engine, transmission, wheels, suspension, brakes, bod
   const tireRadius = [.305, .315, .325, .34, .355, .375, .40, .425][wheels-1];
   const rimRadius = [13, 13, 14, 15, 16, 17, 18, 19][wheels-1] * .0254 / 2;
   const axleTorque = [95, 205, 365, 590, 850, 1250, 1870, 2850][engine-1];
+  const kitFactor = kits[0] ? 1.18 : 1;
+  const torque = axleTorque * kitFactor;
+  const referenceRadius = .305; // Stock final drive is the catalog reference.
+  const topSpeed = 2.15 + 2.07 * (transmission-1);
   return {
-    tireRadius, rimRadius,
-    torque: axleTorque * (kits[0] ? 1.18 : 1),
+    tireRadius, rimRadius, torque, topSpeed,
+    powerKW: [.7, 2.8, 7.5, 14, 24, 37, 55, 82][engine-1] * kitFactor,
+    driveForce: torque / referenceRadius,
+    fittedTorque: torque * tireRadius / referenceRadius,
     aero: Math.max(0,body-4)/4,
-    launch: 3.0 + .72 * (engine-1),
-    wheelSpeed: (2.15 + 2.07 * (transmission-1)) / tireRadius,
+    launch: (3.0 + .72 * (engine-1)) * referenceRadius / tireRadius,
+    wheelSpeed: topSpeed / tireRadius,
     friction: 1.28 + .11 * (wheels-1),
     damperLimit: 2300 + 230 * (suspension-1),
     brakeTorque: 650 + 240 * (brakes-1),

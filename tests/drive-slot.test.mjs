@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDriveSlot, scoreParts } from '../src/drive-slot.js';
 import { createSimulation, STEP } from '../src/physics.js';
-import { readGarage, levelOf, advanceGarage, purchase } from '../src/garage.js';
+import { readGarage, levelOf, advanceGarage, purchase, buildSpec } from '../src/garage.js';
 
 test('only three across distinct reels score; each legal line pays once',()=>{
   const miss=scoreParts([0,1,0,0,8,9,0,9,8]);
@@ -149,4 +149,39 @@ test('the stock car rolls back on the first rise; the next build clears it under
       assert.ok(rollback>1);
     }else assert.ok(peak>25);
   }
+});
+
+test('tires change grip and rolling geometry while wheel force, launch and speed ratings stay independent',()=>{
+  const stock=Array(8).fill(1), base=buildSpec(stock);
+  for(let grade=2;grade<=8;grade++){
+    const levels=[...stock];levels[2]=grade;
+    const spec=buildSpec(levels);
+    for(const key of ['driveForce','powerKW','topSpeed','torque'])assert.equal(spec[key],base[key]);
+    assert.ok(spec.friction>base.friction);
+    assert.ok(Math.abs(spec.fittedTorque/spec.tireRadius-base.driveForce)<1e-9);
+    assert.ok(Math.abs(spec.launch*spec.tireRadius-base.launch*base.tireRadius)<1e-9);
+    assert.ok(Math.abs(spec.wheelSpeed*spec.tireRadius-base.topSpeed)<1e-9);
+  }
+  const engine=buildSpec([2,1,1,1,1]),gearbox=buildSpec([1,2,1,1,1]);
+  assert.ok(engine.powerKW>base.powerKW && engine.driveForce>base.driveForce);
+  assert.equal(engine.topSpeed,base.topSpeed);
+  assert.equal(gearbox.powerKW,base.powerKW);assert.equal(gearbox.driveForce,base.driveForce);
+  assert.ok(gearbox.topSpeed>base.topSpeed);
+  const runs=[1,8].map(grade=>{
+    const sim=createSimulation({levels:[1,1,grade,1,1],heightAt:()=>0});
+    for(let i=0;i<120;i++)sim.step();
+    let launch;
+    for(let i=1;i<=720;i++){sim.step(1);if(i===120)launch=sim.body.getLinearVelocity().x;}
+    assert.ok(sim.wheelPowerKW>0);
+    assert.ok(sim.launchSeconds>2 && sim.launchSeconds<5);
+    const launchTime=sim.launchSeconds;
+    sim.step(0,true);assert.equal(sim.wheelPowerKW,0);
+    assert.equal(sim.launchSeconds,launchTime);
+    sim.setBuild([2,1,grade,1,1]);
+    assert.equal(sim.launchSeconds,null);
+    sim.step(1);assert.equal(sim.launchSeconds,null);
+    return [launch,sim.body.getLinearVelocity().x];
+  });
+  assert.ok(Math.abs(runs[0][0]-runs[1][0])<.12,JSON.stringify(runs));
+  assert.ok(Math.abs(runs[0][1]-runs[1][1])<.12,JSON.stringify(runs));
 });

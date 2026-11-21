@@ -122,6 +122,7 @@ $('spring').addEventListener('input', tune); $('damping').addEventListener('inpu
 document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => { const [f, d] = presets[b.dataset.preset]; $('spring').value = f; $('damping').value = d; tune(); }));
 document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click', () => {
   drive = b.dataset.drive; sim.setDrive(drive);
+  $('drive-readout').textContent={awd:'Полный привод',fwd:'Передний привод',rwd:'Задний привод'}[drive];
   document.querySelectorAll('[data-drive]').forEach(option => { const selected = option.dataset.drive === drive; option.classList.toggle('selected', selected); option.setAttribute('aria-pressed', selected); });
 }));
 $('pause').addEventListener('click', () => pause()); $('reset').addEventListener('click', reset); $('resume').addEventListener('click', () => finished ? reset() : pause(false));
@@ -352,18 +353,30 @@ function frame(now) {
   needsRedraw=false;
   if(profiling)profileOutput.dataset.draws=String(++drawCount);
   if(now>=hudAt||paused||finished){hudAt=now+100;
-  const distance=Math.max(0,Math.min(FINISH,pos.x-3));$('speed').textContent=Math.round(Math.abs(sim.body.getLinearVelocity().x)*3.6);$('distance').textContent=`${Math.floor(distance)} / ${FINISH} м`;$('progress').value=finished?FINISH:distance;$('time').textContent=formatTime(sim.elapsed);
+  const distance=Math.max(0,Math.min(FINISH,pos.x-3));
+  const signedSpeed=sim.body.getLinearVelocity().x, speedKmh=Math.abs(signedSpeed)*3.6;
+  $('speed').textContent=Math.round(speedKmh);
+  $('distance').textContent=`${Math.floor(distance)} / ${FINISH} м`;
+  $('progress').value=finished?FINISH:distance;
+  $('time').textContent=formatTime(sim.elapsed);
+  $('speed-needle').setAttribute('transform','rotate('+(185+Math.min(80,speedKmh)*170/80)+' 90 82)');
+  const power=sim.wheelPowerKW;
+  $('launch-time').textContent=sim.launchSeconds===null ? '—' : sim.launchSeconds.toFixed(2).replace('.',',');
+  $('power-live').textContent=power.toFixed(1).replace('.',',');
+  $('power-fill').style.width=Math.min(100,power/spec.powerKW*100)+'%';
   routePeak = Math.max(routePeak, Math.floor(distance));
   if (routePeak >= queuedPeak+25) recordProgress(null,routePeak);
   $('best').textContent = 'Рекорд '+routePeak+' м';
-  const signedSpeed = sim.body.getLinearVelocity().x, span = sim.elapsed - telemetryTime;
+  const span = sim.elapsed - telemetryTime;
   if (span > .025 || telemetryTime === 0) {
     const accel = span > .025 ? (signedSpeed-telemetrySpeed)/span : 0;
-    $('acceleration').textContent = 'Разгон '+(Math.round(accel*10)/10).toFixed(1)+' м/с²';
+    $('acceleration').textContent=(Math.round(accel*10)/10).toFixed(1).replace('.',',');
+    const fill=$('accel-fill'), extent=Math.min(50,Math.abs(accel)*5);
+    fill.style.left=(accel<0 ? 50-extent : 50)+'%'; fill.style.width=extent+'%';
     telemetrySpeed = signedSpeed; telemetryTime = sim.elapsed;
   }
   $('nitro-charge').textContent=Math.round(sim.nitroCharge*100)+'%';$('nitro').classList.toggle('active',sim.boosting);
-  $('pressure-live').textContent=`Rear ${sim.tires[0].pressureBar.toFixed(2)} / Front ${sim.tires[1].pressureBar.toFixed(2)} bar`;
+  $('pressure-live').textContent=`Задние ${sim.tires[0].pressureBar.toFixed(2)} / Передние ${sim.tires[1].pressureBar.toFixed(2)} бар`;
   $('rear').value=sim.joints[0].getJointTranslation();$('front').value=sim.joints[1].getJointTranslation();
   if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Машина перевернулась. Нажми R для нового заезда.':pos.x>53&&pos.x<91?'Брусчатка':pos.x>116&&pos.x<163?'Подъём':pos.x>333&&pos.x<433?'Перевал':pos.x>498&&pos.x<563?'Спуск к бухте':pos.x>663&&pos.x<753?'Последний гребень':sim.elapsed<5?'До брусчатки 55 м':'';}
   }

@@ -157,3 +157,15 @@ On a flat road, the settled stock front tire deflected 46.7, 27.5 and 21.3 mm at
 The desktop browser displayed the rusted and maximum-tune shells with independent rolling wheels, and responded to a D-key launch in a fresh test garage. The served HTML, both scripts and the body atlas matched the production files byte for byte.
 
 Final verification passed all 39 tests in 332.06 s, lint, production build and whitespace checks.
+
+## 2026-11-21 · Instruments and independent upgrade ratings
+
+The instrument cluster reads interpolated simulation speed, signed longitudinal acceleration, actual positive motor power at the rims, and the selected drive. The standing 0–5 km/h timer starts on forward throttle near zero speed and interpolates the crossing between fixed solver ticks. It clears on a new build or run. The adjacent build sheet displays rated peak wheel power, starting tractive force, transmission speed limit, tire friction coefficient, brake torque and nitro duration. A winning upgrade shows the previous value next to each changed rating.
+
+Engine grade and the compressor set the force and power budgets. Transmission grade sets the road-speed limit. Fitting a different physical tire radius compensates motor torque and angular speed for wheel leverage. The unpowered axle coasts under throttle. Grip, pressure, contact-patch deformation, wheel inertia and road slope still influence actual motion.
+
+On flat ground at 2.2 bar, stock AWD reached 5 km/h in 2.87 s and ran at 7.00 km/h after ten seconds. Changing only wheels to grade 8 gave 2.72 s and 7.01 km/h, with identical engine and gearbox ratings. Changing only the engine to grade 2 gave 1.25 s and 7.00 km/h. Changing only the transmission to grade 2 gave 2.87 s and 11.84 km/h. With all parts and kits installed, AWD, FWD and RWD completed 800 m in 55.32 s, 56.53 s and 55.74 s respectively.
+
+Desktop browser verification used genuine slot lines. A wheel triple changed the grip coefficient from 1.28 to 1.39. A subsequent engine triple changed rated power from 0.7 to 2.8 kW and starting force from 311 to 672 N. A fresh browser launch on D recorded 2.88 s to 5 km/h. Dashboard and slot were also inspected at a 390 px viewport, with no horizontal page overflow. The production assets were checked against the running local server.
+
+Verification passed all 40 automated tests in 369.56 s, lint, production build and whitespace checks.

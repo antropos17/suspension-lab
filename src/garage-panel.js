@@ -18,7 +18,21 @@ export function createGaragePanel(left, right, title) {
   return function draw(garage, changes, reels) {
     const levels = garage.points.map(levelOf);
     const spec = buildSpec(levels,garage.kits);
-    const specs = [Math.round(spec.torque)+' Н·м', 'до '+(spec.wheelSpeed*spec.tireRadius*3.6).toFixed(0)+' км/ч',
+    const ratings = {
+      power:spec.powerKW.toLocaleString('ru-RU',{maximumFractionDigits:1}),
+      force:Math.round(spec.driveForce).toLocaleString('ru-RU'),
+      speed:Math.round(spec.topSpeed*3.6).toString(),
+      grip:spec.friction.toFixed(2).replace('.',','),
+      brake:spec.brakeTorque.toLocaleString('ru-RU'),
+      nitro:spec.boostDuration.toFixed(1).replace('.',',')
+    };
+    for(const [id,value] of Object.entries(ratings)){
+      const field=document.getElementById('stat-'+id), previous=field.textContent;
+      field.parentElement.querySelector('.was').textContent=
+        changes && previous!==value ? 'было '+previous : '';
+      field.textContent=value;
+    }
+    const specs = [Math.round(spec.torque)+' Н·м', 'до '+(spec.topSpeed*3.6).toFixed(0)+' км/ч',
       'Ø '+Math.round(spec.tireRadius*200)+' см · μ '+spec.friction.toFixed(2), (spec.damperLimit/1000).toFixed(2)+' кН',
       spec.brakeTorque+' Н·м', finishes[levels[5]-1],
       spec.smokeFactor.toFixed(2)+'× копоть', spec.boostDuration.toFixed(1)+' с форсажа'];
