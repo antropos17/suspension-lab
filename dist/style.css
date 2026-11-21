@@ -73,7 +73,11 @@ progress::-webkit-progress-value { background:#b27b3d }
 #wallet b {font-size:12px;font-weight:500}
 #spin {min-height:42px;background:#773f48;border:1px solid #ae7880;border-bottom:3px solid #48262d;color:#fff5eb;font-weight:650;font-size:14px}
 #spin:hover:enabled {background:#8a4d56}#spin:active:enabled{transform:translateY(1px)}#spin:disabled{background:#59484d;color:#e1d8d7}
-.spin-receipt {min-height:3em;color:#ebece4;font-size:12px;line-height:1.35}
+.spin-receipt {display:flex;align-items:center;gap:8px;min-height:33px;margin-top:7px;padding:4px 8px;color:#ebe6df;font-size:12px;line-height:1.35}
+.spin-receipt.fitted {color:#302c29;background:#e6d9c4;border-top:2px solid #a99377;border-bottom:1px dashed #907b64}
+.receipt-parts {display:flex;gap:2px;flex:none}.receipt-parts:empty {display:none}
+.receipt-parts .part-icon {width:25px;border-radius:1px}
+#slot-time:empty {display:none}
 #slot-time {display:block;color:var(--amber)}
 .recipes,.tuning-shop {font-size:12px}.recipes {margin-top:7px;color:#d8d3ce}
 details p {font-size:13px;line-height:1.45;max-width:72ch;margin:7px 0}
@@ -83,7 +87,6 @@ details p {font-size:13px;line-height:1.45;max-width:72ch;margin:7px 0}
 #shop-items button {display:flex;align-items:center;text-align:left;gap:8px;background:#f0ede1;color:var(--ink);padding:6px}
 #shop-items button:disabled {background:#cbd1cf;color:#49555a}
 #shop-items small {display:block;font-size:11px;margin-top:3px}#shop-notice {margin-top:4px}
-.fit-tag {position:absolute;right:0;bottom:1px;background:var(--amber);color:var(--ink);font-size:11px;padding:3px 5px;border-radius:2px}
 .manual-settings {margin:12px 0;font-size:14px}.workbench {display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:25px;margin:14px 0}.workbench h2 {font-size:22px}.workbench input{width:100%;accent-color:#713b46}
 .workbench label,.workbench .range-labels,.suspension-readout {display:flex;justify-content:space-between;gap:8px}.workbench .range-labels,.workbench small {font-size:11px}.intro button,.soot-control,.tuning label,.setup>span,.suspension-readout {margin-top:10px}.setup>span{display:block}.setup button{padding:6px;font-size:12px}.selected,.intro [aria-pressed=true] {background:#67404a;color:white}.suspension-readout meter{width:50px}
 footer {font-size:11px;color:#49565d}footer i {display:inline-block;width:8px}
@@ -171,3 +174,20 @@ footer {font-size:11px;color:#49565d}footer i {display:inline-block;width:8px}
 #accel-fill {width:50%;left:50%;transform-origin:left;transform:scaleX(0)}
 .suspension-readout meter::-webkit-meter-optimum-value {background:#89616a}
 @media(prefers-reduced-motion:reduce){.scale-strip i{transition:none}}
+
+.route-line {display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+#road-speed {font-size:12px;color:#f1d8b1}
+.drive-slot {border-radius:0;border-bottom:0}
+.instruments {border-radius:0 0 7px 7px;overflow:hidden}
+@media (min-width:781px) and (max-width:960px){
+  .drive-slot {grid-template-columns:minmax(130px,1fr) minmax(330px,1.8fr) minmax(130px,1fr)}
+  .slot-bank {--cell:clamp(46px,6.6vw,61px)}
+}
+
+@media(max-width:480px){
+  .stage {display:grid;grid-template-rows:minmax(0,1fr) auto;height:calc(32vh + 52px);min-height:272px}
+  .pedals {position:static;display:grid;grid-template-columns:1fr 1fr 1.28fr 1fr;gap:4px;padding:4px;background:#38373a;border-top:1px solid #615c5d}
+  .pedals button {min-height:44px;padding:4px 6px}
+  .recipes summary {min-height:36px;padding:9px 0}
+  .part-info small {font-size:11px}
+}

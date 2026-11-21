@@ -11,11 +11,32 @@
     <header><div class="brand"><img src="assets/garage-mark.png" width="63" height="48" alt=""><div><h1>Бакинский гараж</h1><p>Прибрежная трасса · 800 м</p></div></div><div class="header-actions"><a id="admin-link" href="#admin">Админ-панель</a><button id="pause" aria-keyshortcuts="P">Пауза <kbd>P</kbd></button><button id="reset" aria-keyshortcuts="R">Новый заезд <kbd>R</kbd></button></div></header>
     <section class="stage" aria-label="Заезд по Баку">
       <canvas id="game" aria-label="Седан на прибрежной трассе в Баку. D — газ, A — задний ход, пробел — тормоз."></canvas>
-      <div class="route-hud"><div class="route"><span id="distance">0 / 800 м</span><progress id="progress" max="800" value="0" aria-label="Пройденная дистанция"></progress></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
+      <div class="route-hud"><div class="route"><div class="route-line"><span id="distance">0 / 800 м</span><b id="road-speed">0 км/ч</b></div><progress id="progress" max="800" value="0" aria-label="Пройденная дистанция"></progress></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
       <div id="notice" class="notice" role="status">Гараж · выезд направо</div>
       <div class="terrain-label" id="road-pay">До поста 5 м · +12 мон.</div>
       <div id="overlay" class="overlay" hidden><div><p id="overlay-caption">Take a breath.</p><h2 id="overlay-title">Paused</h2><button id="resume">Keep driving</button></div></div>
       <div class="pedals"><button id="nitro" data-control="nitro" aria-label="Нитро, удерживать N" aria-keyshortcuts="N">N₂O <b id="nitro-charge">100%</b></button><button data-control="reverse" aria-label="Назад">◀</button><button data-control="brake" class="brake" aria-label="Тормоз">Тормоз</button><button data-control="forward" aria-label="Газ">▶</button></div>
+    </section>
+    <section class="drive-slot" aria-labelledby="slot-title" lang="ru">
+      <div class="part-rack" id="rack-left" aria-label="Силовая установка и колёса"></div>
+      <div class="reel-console">
+        <div class="slot-heading"><h2 id="slot-title">Барабаны мастерской</h2><span id="build-level"></span></div>
+        <div class="slot-machine"><div class="slot-bank" id="slot-bank" role="group" aria-label="Три барабана по три символа"></div>
+        <div class="slot-controls"><div id="wallet" aria-label="Кошелёк"></div>
+          <button id="spin" aria-keyshortcuts="S" disabled><svg aria-hidden="true" width="19" height="15" viewBox="0 0 24 19" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="1" y="5" width="17" height="12" rx="2"/><path d="M7 6v10m5-10v10m6-3h3V5"/><circle cx="21" cy="3" r="1.7"/></svg> Крутить и ехать <kbd>S</kbd></button>
+          <span id="slot-time"></span>
+        </div></div>
+        <div class="spin-receipt"><span class="receipt-parts" aria-hidden="true"></span><span id="slot-status" role="status">Три одинаковых на линии — установка детали.</span></div>
+        <details class="recipes"><summary>Линии и удержание барабана</summary>
+          <p>Три одинаковые детали на трёх барабанах поднимают свой узел на уровень. Играют три горизонтали и две диагонали. Каждая собранная линия считается отдельно.</p>
+          <p>Три монеты приносят 30 монет, три алмаза — 3 алмаза. Нажми остановившийся барабан, чтобы удержать его на один ход. Крутить можно и на ходу.</p>
+        </details>
+      </div>
+      <div class="part-rack" id="rack-right" aria-label="Подвеска, тормоза и кузов"></div>
+      <details class="tuning-shop"><summary>Заказы мастерской</summary>
+      <p>Дорожные посты дают монеты и алмазы один раз. За монеты закажи двойное улучшение, за алмазы — спецкомплект. Заказ установится, когда выпадет линия его детали.</p>
+      <div id="shop-items"></div><div id="shop-notice" role="status"></div>
+      </details>
     </section>
     <div class="instruments">
       <section class="cluster" aria-labelledby="cluster-title">
@@ -44,31 +65,11 @@
         </dl>
       </section>
     </div>
-    <section class="drive-slot" aria-labelledby="slot-title" lang="ru">
-      <div class="part-rack" id="rack-left" aria-label="Силовая установка и колёса"></div>
-      <div class="reel-console">
-        <div class="slot-heading"><h2 id="slot-title">Барабаны мастерской</h2><span id="build-level"></span></div>
-        <div class="slot-machine"><div class="slot-bank" id="slot-bank" role="group" aria-label="Три барабана по три символа"></div>
-        <div class="slot-controls"><div id="wallet" aria-label="Кошелёк"></div>
-          <button id="spin" aria-keyshortcuts="S" disabled><svg aria-hidden="true" width="19" height="15" viewBox="0 0 24 19" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="1" y="5" width="17" height="12" rx="2"/><path d="M7 6v10m5-10v10m6-3h3V5"/><circle cx="21" cy="3" r="1.7"/></svg> Крутить и ехать <kbd>S</kbd></button>
-          <div class="spin-receipt"><span id="slot-status" role="status">Три одинаковых на линии — установка детали.</span> <span id="slot-time"></span></div>
-        </div></div>
-        <details class="recipes"><summary>Выигрышные линии</summary>
-          <p>Три одинаковые детали на трёх барабанах поднимают свой узел на уровень. Играют три горизонтали и две диагонали. Каждая собранная линия считается отдельно.</p>
-          <p>Три монеты приносят 30 монет, три алмаза — 3 алмаза. Нажми остановившийся барабан, чтобы удержать его на один ход. Крутить можно и на ходу.</p>
-        </details>
-      </div>
-      <div class="part-rack" id="rack-right" aria-label="Подвеска, тормоза и кузов"></div>
-      <details class="tuning-shop"><summary>Заказы мастерской</summary>
-      <p>Дорожные посты дают монеты и алмазы один раз. За монеты закажи двойное улучшение, за алмазы — спецкомплект. Заказ установится, когда выпадет линия его детали.</p>
-      <div id="shop-items"></div><div id="shop-notice" role="status"></div>
-      </details>
-    </section>
     <details class="manual-settings"><summary>Настройки шасси и привода</summary>
-    <section class="workbench" aria-label="Suspension settings">
+    <section class="workbench" aria-label="Настройки подвески">
       <div class="intro"><h2>Настройка шасси</h2><p>Давление и демпфирование можно менять на ходу.</p><button id="xray" aria-pressed="false">Показать шасси</button><div class="soot-control"><label for="soot">Копоть <output id="soot-value">3.0x</output></label><input id="soot" type="range" min="0" max="6" step="0.1" value="3"><div class="range-labels"><span>Нет</span><span>Много</span></div></div></div>
       <div class="tuning"><label for="spring">Жёсткость пружин <output id="spring-value">1.7 Hz</output></label><input id="spring" type="range" min="1.1" max="4" value="1.7" step="0.1"><div class="range-labels"><span>Мягче</span><span>Жёстче</span></div><label for="damping">Демпфирование <output id="damping-value">0.50</output></label><input id="damping" type="range" min="0.1" max="1.2" value="0.50" step="0.05"><div class="range-labels"><span>Свободнее</span><span>Плотнее</span></div><label for="pressure">Давление шин <output id="pressure-value">2.2 bar</output></label><input id="pressure" type="range" min="0.6" max="3.2" value="2.2" step="0.1"><div class="range-labels"><span>Холодная шина</span><span>Жёстче</span></div><small id="pressure-live">Задние 2,20 / Передние 2,20 бар</small></div>
-      <div class="setup"><span>Привод</span><div class="drive-options" role="group" aria-label="Drive type"><button data-drive="fwd" aria-pressed="false">Передний</button><button data-drive="rwd" aria-pressed="false">Задний</button><button data-drive="awd" class="selected" aria-pressed="true">Полный</button></div><span>Настройки</span><div class="presets"><button data-preset="comfort">Комфорт</button><button data-preset="trail" class="selected">Трасса</button><button data-preset="sport">Спорт</button></div><div class="suspension-readout"><span>Задняя <meter id="rear" min="-0.6" max="0.6" value="0" aria-label="Rear suspension travel"></meter></span><span>Передняя <meter id="front" min="-0.6" max="0.6" value="0" aria-label="Front suspension travel"></meter></span></div></div>
+      <div class="setup"><span>Привод</span><div class="drive-options" role="group" aria-label="Тип привода"><button data-drive="fwd" aria-pressed="false">Передний</button><button data-drive="rwd" aria-pressed="false">Задний</button><button data-drive="awd" class="selected" aria-pressed="true">Полный</button></div><span>Настройки</span><div class="presets"><button data-preset="comfort" aria-pressed="false">Комфорт</button><button data-preset="trail" aria-pressed="true" class="selected">Трасса</button><button data-preset="sport" aria-pressed="false">Спорт</button></div><div class="suspension-readout"><span>Задняя <meter id="rear" min="-0.6" max="0.6" value="0" aria-label="Ход задней подвески"></meter></span><span>Передняя <meter id="front" min="-0.6" max="0.6" value="0" aria-label="Ход передней подвески"></meter></span></div></div>
     </section>
     </details>
     <details id="admin" class="admin-panel">

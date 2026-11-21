@@ -1,12 +1,16 @@
-import { drawPartSample, drawRim } from './part-art.js';
+import { drawPartSample } from './part-art.js';
 
 // Brief cutaways are drawn in the car's moving frame. All motion is presentation only.
 const ink='#25282a', steel='#aaa9a0', bright='#f3e6c9', brass='#c79358';
 const clamp=t=>Math.max(0,Math.min(1,t));
-export const FIT_SECONDS=1.8;
+export const FIT_SECONDS=2.15;
+function ease(t){t=clamp(t);return t*t*(3-2*t);}
 
-function component(c,id,t,level){
-  const seat=1-(1-clamp((t-.05)/.53))**3;
+export const paintSweep=t=>ease((t-.06)/.64);
+export const rimSeating=t=>ease((t-.07)/.44);
+
+function component(c,id,t){
+  const seat=ease((t-.07)/.44);
   const settle=Math.sin(clamp((t-.28)/.48)*Math.PI);
   const gap=1-seat;
   const block=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);c.strokeStyle=ink;c.lineWidth=1.5;c.strokeRect(x,y,w,h);};
@@ -19,7 +23,14 @@ function component(c,id,t,level){
   c.lineCap='round';c.lineJoin='round';
   switch(id){
     case 0: // The block lowers between its mounts, then the three pistons cycle.
-      block(-19,7,38,5,steel);c.translate(0,-22*gap);
+      block(-19,7,38,5,steel);c.translate(0,-24*gap);c.rotate(-.09*gap);
+      const sling=1-ease((t-.48)/.18);
+      if(sling>0){
+        c.save();c.globalAlpha*=sling;
+        const lift=-23-12*(1-sling);
+        rod(-11,-13,0,lift,bright,1.4);rod(11,-13,0,lift,bright,1.4);
+        rod(0,lift,0,lift-8,ink,2.5);c.restore();
+      }
       block(-16,-6,32,16,ink);
       for(let n=0;n<3;n++){
         const x=-11+n*10, y=-7-3*Math.sin(2*Math.PI*(t*1.9+n/3))*seat;
@@ -33,12 +44,13 @@ function component(c,id,t,level){
         for(let j=0;j<8;j++){block(-2,-10,4,7,brass);c.rotate(Math.PI/4);}
         disc(0,0,8,steel);disc(0,0,3,ink);c.restore();
       }break;
-    case 2: // Seated rim and lug pattern with the tire visible around it.
-      c.translate(-18*gap,-12*gap);c.rotate(-1.5*gap);
-      disc(0,0,16,ink);drawRim(c,level,15);
-      if(t>.32 && t<.84){
-        c.rotate(-1.3+clamp((t-.32)/.44)*1.5);
-        disc(4,-3,3,steel);rod(5,-5,15,-16,ink,4.5);rod(5,-5,15,-16,bright,2.5);
+    case 2: // The wheel renderer seats the actual rim. A socket then tightens two lugs.
+      if(t>.48 && t<.81){
+        const stroke=clamp((t-.48)/.32)*2;
+        const lug=stroke>=1 ? -1 : 1;
+        c.globalAlpha*=Math.sin(Math.PI*(stroke%1))**.35;
+        c.translate(lug*4,-3);c.rotate(-1.4+ease(stroke%1)*1.25);
+        disc(0,0,3,steel);rod(1,-2,14,-14,ink,4.5);rod(1,-2,14,-14,bright,2.5);
       }
       break;
     case 3:{ // Piston stroke and rebound change the coil spacing.
@@ -56,7 +68,11 @@ function component(c,id,t,level){
     case 5: // A spray gun travels along the body as the finish is revealed.
       c.translate(0,-14);rod(0,0,9,-5,steel,4);block(8,-9,9,6,brass);
       rod(13,-4,16,3,ink,4);block(12,-16,5,7,bright);
-      for(let n=0;n<3;n++)rod(1,1,-6-n*3,6+n*1.8,bright,1);
+      if(t<.71){
+        const paint=c.createLinearGradient(0,0,-18,15);
+        paint.addColorStop(0,'rgba(233,221,190,.72)');paint.addColorStop(1,'rgba(222,211,188,0)');
+        c.fillStyle=paint;c.beginPath();c.moveTo(0,1);c.lineTo(-23,7);c.lineTo(-7,23);c.fill();
+      }
       break;
     case 6: // Silencer and sleeve slide onto the existing pipe.
       rod(0,1,24,1,steel,5);c.translate(-19*gap,4*gap);
@@ -72,14 +88,14 @@ function component(c,id,t,level){
 }
 
 export function drawFitting(c,event,t,sim,X,Y,scale,width,height){
-  const {part,label,detail}=event;
-  const sweep=clamp((t-.06)/.64);
+  const {part,label,metric,from,to}=event;
+  const sweep=paintSweep(t);
   const local=(x,y)=>sim.body.getWorldPoint({x,y});
   let mounts;
   switch(part){
     case 0: mounts=[local(1.2,.05)];break;
     case 1: mounts=[local(.38,-.14)];break;
-    case 2: case 4: mounts=sim.rims.map(r=>r.getPosition());break;
+    case 2: case 4: mounts=sim.wheels.map(r=>r.getPosition());break;
     case 3: mounts=sim.rims.map(r=>{const p=r.getPosition();return {x:p.x,y:p.y+.23};});break;
     case 5: mounts=[local(2.12-4.24*sweep,.12)];break;
     case 6: mounts=[sim.exhaustMount.point];break;
@@ -87,26 +103,37 @@ export function drawFitting(c,event,t,sim,X,Y,scale,width,height){
   }
   const anchor=mounts.at(-1), ax=X(anchor.x), ay=Y(anchor.y);
   c.save();
-  c.globalAlpha=clamp(t/.07)*clamp((1-t)/.20);
+  const visibility=ease(t/.055)*(1-ease((t-.90)/.10));
+  c.globalAlpha=visibility*(1-ease((t-.69)/.13));
   for(const p of mounts){
     c.save();c.translate(X(p.x),Y(p.y));c.rotate(-sim.body.getAngle());
     const zoom=Math.max(.72,Math.min(1.5,scale/55));c.scale(zoom,zoom);
-    component(c,part,t,event.to);c.restore();
+    component(c,part,t);c.restore();
   }
-  c.font='600 14px system-ui';
-  const compact=width<480, size=compact?32:44, h=size+4;
-  const w=Math.ceil(Math.max(c.measureText(label).width,c.measureText(detail).width)+size+22);
+  c.globalAlpha=visibility;
+  const compact=width<480, size=compact?32:44, h=size+6;
+  const level=to>from ? from+'→'+to : 'Ур. '+to;
+  c.font='600 13px system-ui';
+  const topWidth=c.measureText(label).width+10+c.measureText(level).width;
+  c.font='12px system-ui';
+  const w=Math.ceil(size+23+Math.max(topWidth,c.measureText(metric).width));
   const x=Math.min(width-w-6,Math.max(6,X(sim.body.getPosition().x)+scale*.78));
   const y=Math.max(compact?81:50,Math.min(height-90,Y(sim.body.getPosition().y)-scale*1.55-h));
-  c.beginPath();c.moveTo(ax,ay-9);c.lineTo(ax+10,ay-24);c.lineTo(x+size*.5,y+h);
+  // Extend the leader from the work order to the actual mounting point.
+  const sx=x+size*.5,sy=y+h,elbowX=ax+10,elbowY=ay-24;
+  const lead=ease(t/.19), bend=Math.min(1,lead/.7), tip=clamp((lead-.7)/.3);
+  c.beginPath();c.moveTo(sx,sy);c.lineTo(sx+(elbowX-sx)*bend,sy+(elbowY-sy)*bend);
+  if(tip)c.lineTo(elbowX+(ax-elbowX)*tip,elbowY+(ay-9-elbowY)*tip);
   c.strokeStyle=ink;c.lineWidth=3;c.stroke();c.strokeStyle=bright;c.lineWidth=1;c.stroke();
-  c.fillStyle=ink;c.fillRect(x,y,w,h);c.fillStyle=brass;c.fillRect(x+w-3,y,3,h);
-  c.save();c.beginPath();c.rect(x+2,y+2,size,size);c.clip();
-  const slide=clamp((t-.12)/.35),shift=size*slide*slide*(3-2*slide);
-  drawPartSample(c,part,event.from,x+2-shift,y+2,size);
-  drawPartSample(c,part,event.to,x+2+size-shift,y+2,size);
+  c.fillStyle=ink;c.fillRect(x,y,w,h);c.fillStyle=brass;c.fillRect(x,y,2,h);
+  c.save();c.beginPath();c.rect(x+3,y+3,size,size);c.clip();
+  const shift=size*ease((t-.14)/.33);
+  drawPartSample(c,part,from,x+3-shift,y+3,size);
+  drawPartSample(c,part,to,x+3+size-shift,y+3,size);
   c.restore();
-  c.textAlign='left';c.fillStyle=bright;c.fillText(label,x+size+9,y+(compact?15:20));
-  c.font='12px system-ui';c.fillStyle='#d7c7b0';c.fillText(detail,x+size+9,y+h-8);
+  const tx=x+size+11,titleY=y+(compact?15:20);
+  c.font='600 13px system-ui';c.textAlign='left';c.fillStyle=bright;c.fillText(label,tx,titleY);
+  c.textAlign='right';c.font='600 12px system-ui';c.fillStyle='#dfbb88';c.fillText(level,x+w-7,titleY);
+  c.textAlign='left';c.font='12px system-ui';c.fillStyle='#f0e8d9';c.fillText(metric,tx,y+h-7);
   c.restore();
 }

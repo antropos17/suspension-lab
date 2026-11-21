@@ -3,7 +3,7 @@ import { PART_NAMES, THRESHOLDS, levelOf, buildSpec, SPECIALS } from './garage.j
 import { metricHP } from './vehicle-constants.js';
 import { paintIcon } from './part-art.js';
 
-const finishes = ['Ржавчина', 'Грунт', 'Эмаль', 'Два тона', 'Утиный хвост', 'Спорт', 'Двойное крыло', 'Гоночный обвес'];
+export const finishes = ['Ржавчина', 'Грунт', 'Эмаль', 'Два тона', 'Утиный хвост', 'Спорт', 'Двойное крыло', 'Гоночный обвес'];
 
 export function createGaragePanel(left, right, title) {
   const cards = PART_NAMES.map((name,i) => {
@@ -39,26 +39,17 @@ export function createGaragePanel(left, right, title) {
       spec.smokeFactor.toFixed(2)+'× копоть', spec.boostDuration.toFixed(1)+' с форсажа'];
     title.textContent = 'Сборка ' + levels.reduce((a,b)=>a+b,0) + ' / 64';
     cards.forEach((card,i) => {
-      const lv = levels[i], next = THRESHOLDS[lv];
+      const lv = levels[i];
       paintIcon(card.querySelector('i'),i,lv);
       card.querySelector('strong').textContent = 'Ур. '+lv;
       const pendingKit=SPECIALS.some((item,k)=>item.part===i && garage.kitOrders[k]);
-      const target=lv+(garage.orders[i]?2:1);
-      const fitting=next ? 'ур. '+target+' за тройку' : 'макс.';
-      card.querySelector('small').textContent=specs[i]+' · '+fitting+(pendingKit?' + спецкомплект':'');
+      const order=garage.orders[i] ? ' · заказ до ур. '+Math.min(8,lv+2) : '';
+      card.querySelector('small').textContent=specs[i]+order+(pendingKit?' · заказан комплект':'');
       const bar = card.querySelector('progress');
       bar.max=THRESHOLDS.length;
       bar.value=lv;
       if (!changes?.[i].gain) return;
-      const {gain,from,to} = changes[i];
-      const tag = document.createElement('span');
-      tag.className = 'fit-tag';
-      tag.textContent = to > from ? 'Ур. '+from+' → '+to : '+'+gain+' очк.';
-      card.append(tag);
-      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const flash = tag.animate([{opacity:1},{opacity:1,offset:.8},{opacity:0}],{duration:2100});
-      flash.onfinish = () => tag.remove();
-      if (reduced) return;
+      if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
       card.querySelector('i').animate([
         {transform:'translateY(-5px) rotate(-6deg)'},
         {transform:'translateY(1px) rotate(1deg)',offset:.72},

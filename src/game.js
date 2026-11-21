@@ -10,8 +10,8 @@ import { createSmokeRenderer } from './smoke-renderer.js';
 import { createDriveSlot, LINE_NAMES, testLineBoard } from './drive-slot.js';
 import { createSlotPanel } from './slot-panel.js';
 import { readGarage, advanceGarage, levelOf, THRESHOLDS, SYMBOLS, PART_NAMES, SPECIALS, ROAD_STOPS, claimRoadStops, purchase, buildSpec } from './garage.js';
-import { createGaragePanel } from './garage-panel.js';
-import { drawFitting, FIT_SECONDS } from './fitting.js';
+import { createGaragePanel, finishes } from './garage-panel.js';
+import { drawFitting, FIT_SECONDS, paintSweep, rimSeating } from './fitting.js';
 import { drawRim } from './part-art.js';
 import { createShop } from './shop.js';
 import { createGarageProfile } from './garage-profile.js';
@@ -65,20 +65,35 @@ function collectRoadPay(meters){
   })).finally(()=>{collecting=false;});
 }
 function flushDistance() { profile.savePeak(routePeak); }
-function refreshBuild(changes,installed=[]) {
+function refreshBuild(changes,installed=[],before) {
   levels=garage.points.map(levelOf);spec=buildSpec(levels,garage.kits);
   sim?.setBuild(levels,garage.kits);
+  const receipts=[];
   if(changes){
     for(const [part,{from,to}] of changes.entries()){
       const kit=SPECIALS.find(k=>k.part===part && installed.includes(k.name));
       if(to===from && !kit)continue;
       const last=fittings.at(-1);
       const start=Math.max(sim.elapsed,last ? last.start+FIT_SECONDS : 0);
-      fittings.push({part,from,to,start,kit,label:kit?.name ?? PART_NAMES[part],
-        detail:to>from ? 'Уровень '+from+' → '+to : 'Комплект установлен'});
+      const metric=fittingMetric(part,before,spec,from,to,!!kit && part===5);
+      const label=kit?.name ?? PART_NAMES[part];
+      fittings.push({part,from,to,start,kit,metric,label});
+      receipts.push(PART_NAMES[part]+(to>from?' '+from+'→'+to:'')+' · '+metric+(kit && part!==5?' · '+kit.name:''));
     }
   }
   drawGarage(garage,changes);drawShop(garage);needsRedraw=true;
+  return receipts;
+}
+function fittingMetric(part,oldSpec,newSpec,from,to,carbon){
+  if(part===5)return carbon ? 'Карбоновый обвес' : finishes[from-1]+' → '+finishes[to-1];
+  const [field,scale,places,unit]=[
+    ['powerKW',metricHP(1),1,'л.с.'],['topSpeed',3.6,0,'км/ч'],['friction',1,2,'μ'],
+    ['damperLimit',.001,2,'кН'],['brakeTorque',1,0,'Н·м'],null,
+    ['smokeFactor',1,2,'× копоть'],['boostDuration',1,1,'с N₂O']
+  ][part];
+  const number=n=>(n*scale).toLocaleString('ru-RU',{maximumFractionDigits:places});
+  const delta=number(oldSpec[field])+' → '+number(newSpec[field]);
+  return part===2 ? 'Сцепление '+delta : delta+' '+unit;
 }
 function transact(change) {
   const apply=()=>{
@@ -99,10 +114,18 @@ function buyItem(kind,index,expected) {
 function recordProgress(reward, meters) {
   queuedPeak=Math.max(queuedPeak,meters);
   return transact(()=>{
+    const before=reward && buildSpec(garage.points.map(levelOf),garage.kits);
     const {changes,installed}=advanceGarage(garage,meters,reward);
     if(reward){
-      reward.receipt=[...changes.flatMap((c,i)=>c.to>c.from ? [PART_NAMES[i]+' '+c.from+'→'+c.to] : []),...installed].join(', ');
-      refreshBuild(changes,installed);
+      const receipts=refreshBuild(changes,installed,before);
+      reward.fittedParts=[];
+      for(const [i,count] of reward.matches.entries()){
+        if(!count)continue;
+        const hasKit=SPECIALS.some(k=>k.part===i && installed.includes(k.name));
+        if(changes[i].gain || hasKit)reward.fittedParts.push(i);
+        else receipts.push(PART_NAMES[i]+' · макс. ур. 8');
+      }
+      reward.receipt=receipts.join(' / ');
     }
   });
 }
@@ -144,7 +167,10 @@ function tune() {
   const f = +$('spring').value, d = +$('damping').value;
   $('spring-value').textContent = f.toFixed(1) + ' Hz'; $('damping-value').textContent = d.toFixed(2);
   sim.tune(f, d);
-  document.querySelectorAll('[data-preset]').forEach(b => b.classList.toggle('selected', presets[b.dataset.preset][0] === f && presets[b.dataset.preset][1] === d));
+  document.querySelectorAll('[data-preset]').forEach(b=>{
+    const [hz,ratio]=presets[b.dataset.preset], selected=hz===f && ratio===d;
+    b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',selected);
+  });
 }
 $('soot').addEventListener('input',()=>{exhaust.setIntensity(+$('soot').value);$('soot-value').textContent=(+$('soot').value).toFixed(1)+'x';});
 $('pressure').addEventListener('input',()=>{sim.setPressure(+$('pressure').value);$('pressure-value').textContent=(+$('pressure').value).toFixed(1)+' bar';});
@@ -307,7 +333,16 @@ function car() {
     circle(0,0,r*.23,wheelLevel===1?'#766f60':'#c3c4b0',wheelLevel===1?'#99917d':'#e8e5d1',1);
     for(let j=0;j<4;j++){const a=j*Math.PI/2;circle(Math.cos(a)*r*.18,Math.sin(a)*r*.18,r*.035,'#4c574d','#d8d6c0',.6);}
     circle(0,0,r*.105,'#737f72','#d0d0b8',1);
-    drawRim(ctx,wheelLevel,tire.rimRadius*scale);
+    const rimRadius=tire.rimRadius*scale;
+    if(fitting?.part===2 && phase<.51){
+      const seat=rimSeating(phase), gap=1-seat;
+      drawRim(ctx,fitting.from,rimRadius);
+      ctx.save();ctx.rotate(w.getAngle()-body.getAngle());
+      ctx.translate(-.38*scale*gap,-.24*scale*gap);
+      ctx.rotate(body.getAngle()-w.getAngle()-gap*.75);
+      ctx.globalAlpha=Math.min(1,phase/.09);
+      drawRim(ctx,fitting.to,rimRadius);ctx.restore();
+    }else drawRim(ctx,wheelLevel,rimRadius);
     if(sim.dirt>.01){
       ctx.save();ctx.globalAlpha=sim.dirt*.8;
       for(let k=0;k<19;k++){const a=k*2.4,d=r*(.43+.44*(k%7)/6);circle(Math.cos(a)*d,Math.sin(a)*d,Math.max(.8,r*.043),'#8a7151');}
@@ -324,7 +359,7 @@ function car() {
   });
   ctx.save();ctx.translate(X(pos.x),Y(pos.y));ctx.rotate(-body.getAngle());ctx.scale(scale,-scale);
   if(fitting?.part===5 && phase<.70){
-    const edge=2.12-4.24*Math.min(1,Math.max(0,(phase-.06)/.64));
+    const edge=2.12-4.24*paintSweep(phase);
     const oldLevels=levels.slice();oldLevels[5]=fitting.from;
     const oldKits=garage.kits.slice();if(fitting.kit)oldKits[2]=false;
     for(const [left,right,stages,kits] of [[-3,edge,oldLevels,oldKits],[edge,3,levels,garage.kits]]){
@@ -413,7 +448,7 @@ function frame(now) {
   speedNeedle.style.transform='rotate('+needleDegrees.toFixed(2)+'deg)';
   if(now>=hudAt||paused||finished){hudAt=now+100;
   const distance=Math.max(0,Math.min(FINISH,pos.x-3));
-  $('speed').textContent=Math.round(speedKmh);
+  $('speed').textContent=Math.round(speedKmh);$('road-speed').textContent=Math.round(speedKmh)+' км/ч';
   $('distance').textContent=`${Math.floor(distance)} / ${FINISH} м`;
   $('progress').value=finished?FINISH:distance;
   $('time').textContent=formatTime(sim.elapsed);
