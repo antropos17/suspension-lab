@@ -1,5 +1,5 @@
 import { World, Vec2, Edge, Box, Circle, Polygon, RevoluteJoint, PrismaticJoint } from 'planck';
-import { terrainHeight, poolAt, materialAt, GROUND_START, GROUND_STEP, GROUND_COUNT } from './terrain.js';
+import { terrainHeight, poolAt, materialAt, stationAt, YARD_WALL, GROUND_START, GROUND_STEP, GROUND_COUNT } from './terrain.js';
 import { archPoint } from './vehicle-geometry.js';
 import { createPneumaticTire, RIM_RADIUS } from './pneumatic-tire.js';
 import { createExhaustMount } from './exhaust-mount.js';
@@ -14,6 +14,9 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   substeps=Math.max(substeps,Math.ceil(nodeCount/32)*8);
   const world = new World(Vec2(0, -9.81));
   const ground = world.createBody();
+  if(heightAt===terrainHeight){
+    ground.createFixture(new Box(.24,2.4,Vec2(YARD_WALL-.24,1.9),0),{friction:0,restitution:0});
+  }
   const points = [];
   for (let i = 0; i <= GROUND_COUNT; i++) {
     const x = GROUND_START + i * GROUND_STEP;
@@ -166,12 +169,19 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
     setPressure(bar) { tires.forEach(t=>t.setPressure(bar)); },
     tune(hz, ratio) { frequency = hz; damping = ratio; body.setAwake(true); },
     step(throttle = 0, brake = false, nitro = false) {
+      // Slow into the back wall of the yard, then hold; the forward drivetrain stays available.
+      const reversingInYard=heightAt===terrainHeight && throttle<0 && body.getPosition().x<3;
+      const clearance=reversingInYard ? body.getPosition().x-(YARD_WALL+2.25) : Infinity;
+      const reverseLimit=reversingInYard ? Math.sqrt(4*Math.max(0,clearance))/spec.tireRadius : Infinity;
+      brake=brake||clearance<.16;
       boosting = nitro && !brake && throttle>=0 && nitroCharge>0;
       if(boosting){
         throttle=1;
         nitroCharge=Math.max(0,nitroCharge-STEP/spec.boostDuration);
       } else if(!nitro){
         nitroCharge=Math.min(1,nitroCharge+Math.abs(body.getLinearVelocity().x)*STEP/60);
+        if(heightAt===terrainHeight && brake && Math.abs(body.getLinearVelocity().x)<.35 && stationAt(body.getPosition().x)!==undefined)
+          nitroCharge=Math.min(1,nitroCharge+STEP/3);
       }
       const boost=boosting ? spec.boostFactor : 1;
       accelerator += (Math.abs(throttle) - accelerator) * (1 - Math.exp(-STEP * 6));
@@ -194,7 +204,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
       motors.forEach((j, i) => {
         const powered = drive === 'awd' || (drive === 'rwd' ? i === 0 : i === 1);
         const rollingSpeed=Math.abs(body.getLinearVelocity().x)/spec.tireRadius;
-        j.setMotorSpeed(brake ? 0 : -throttle * Math.min(spec.wheelSpeed,rollingSpeed+spec.launch*boost));
+        j.setMotorSpeed(brake ? 0 : -throttle * Math.min(spec.wheelSpeed,reverseLimit,rollingSpeed+spec.launch*boost));
         const powerLimitedTorque = wheelBudgetKW*1000/Math.max(.01,Math.abs(j.getJointSpeed()));
         const available = Math.min(axleBudget,powerLimitedTorque)*boost / (drive==='awd'?2:1);
         const driving = Math.abs(throttle)>.01;

@@ -3,7 +3,7 @@ import { FINISH, STEP, metricHP, DRIVELINE_EFFICIENCY } from './vehicle-constant
 import { createExhaust } from './exhaust.js';
 import { createRoadScene } from './road-scene.js';
 import { createWheelSpray } from './wheel-spray.js';
-import { groundHeight, BRIDGES } from './terrain.js';
+import { groundHeight, BRIDGES, SETTS, stationAt } from './terrain.js';
 import { drawClassicBody, drawWheelWells } from './car-art.js';
 import { createBakuBackdrop } from './baku-background.js';
 import { createSmokeRenderer } from './smoke-renderer.js';
@@ -21,7 +21,7 @@ const smokeCanvas=document.createElement('canvas'),smokeCtx=smokeCanvas.getConte
 const SMOKE_RESOLUTION=.5;
 const drawBaku=createBakuBackdrop(()=>{needsRedraw=true;});
 const drawSmoke=createSmokeRenderer();
-const drawRoad=createRoadScene(ctx), wheelSpray=createWheelSpray();
+const drawRoad=createRoadScene(ctx,()=>{needsRedraw=true;}), wheelSpray=createWheelSpray();
 // Opt-in, bounded diagnostics. No trace is collected during normal play.
 const profiling=new URLSearchParams(location.search).has('profile');
 const samples=[];
@@ -123,7 +123,7 @@ function reset() {
   clearInput(); sim??=createSimulationClient();smokeTime=0;
   sim.reset({ frequency: +$('spring').value, damping: +$('damping').value, drive, pressure:+$('pressure').value, levels,kits:garage.kits });
   paused = finished = false; accumulator = 0; camera = { x: 3, y: 1.4 }; $('overlay').hidden = true; $('pause').textContent = 'Пауза';
-  $('notice').textContent = 'До брусчатки 55 м';
+  $('notice').textContent = 'Гараж · выезд направо';
 }
 function pause(value = !paused) {
   if (finished) return;
@@ -142,11 +142,12 @@ $('soot').addEventListener('input',()=>{exhaust.setIntensity(+$('soot').value);$
 $('pressure').addEventListener('input',()=>{sim.setPressure(+$('pressure').value);$('pressure-value').textContent=(+$('pressure').value).toFixed(1)+' bar';});
 $('spring').addEventListener('input', tune); $('damping').addEventListener('input', tune);
 document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => { const [f, d] = presets[b.dataset.preset]; $('spring').value = f; $('damping').value = d; tune(); }));
-document.querySelectorAll('[data-drive]').forEach(b => b.addEventListener('click', () => {
-  drive = b.dataset.drive; sim.setDrive(drive);
+function selectDrive(mode){
+  drive=mode;sim?.setDrive(drive);
   $('drive-readout').textContent={awd:'Полный привод',fwd:'Передний привод',rwd:'Задний привод'}[drive];
   document.querySelectorAll('[data-drive]').forEach(option => { const selected = option.dataset.drive === drive; option.classList.toggle('selected', selected); option.setAttribute('aria-pressed', selected); });
-}));
+}
+document.querySelectorAll('[data-drive]').forEach(b=>b.addEventListener('click',()=>selectDrive(b.dataset.drive)));
 $('pause').addEventListener('click', () => pause()); $('reset').addEventListener('click', reset); $('resume').addEventListener('click', () => finished ? reset() : pause(false));
 $('xray').addEventListener('click', () => { xray = !xray; needsRedraw=true;$('xray').setAttribute('aria-pressed', xray); $('xray').textContent = xray ? 'Скрыть шасси' : 'Показать шасси'; });
 const admin=$('admin');
@@ -181,6 +182,9 @@ if(testMode){
   }
   $('test-restored').addEventListener('click',()=>fitPreset(4));
   $('test-max').addEventListener('click',()=>fitPreset(THRESHOLDS.length));
+  if(new URLSearchParams(location.search).get('setup')==='max-rwd'){
+    selectDrive('rwd');fitPreset(THRESHOLDS.length);
+  }
   $('test-wallet').addEventListener('click',()=>{
     transact(()=>{garage.coins+=300;garage.gems+=10;drawShop(garage);});
     status.textContent='Начислено 300 монет и 10 алмазов.';
@@ -225,7 +229,7 @@ function scenery() {
   drawBaku(ctx,{width,height,camera,scale});
   const left = camera.x - width*.34/scale - 3, right = left + width/scale + 6;
   drawRoad({X,Y,scale,left,right,height,ground:visibleGround(left,right),claimed:garage.roadStops});
-  for(const [x,label] of [[1,'Старт'],[56,'Камень'],[118,'Подъём'],[333,'Перевал'],[498,'Спуск'],[663,'Гребень'],[FINISH+3,'Финиш']]) {
+  for(const [x,label] of [[56,'Брусчатка'],[118,'Подъём'],[333,'Перевал'],[498,'Спуск'],[663,'Гребень'],[FINISH+3,'Финиш']]) {
     if(x<left||x>right)continue;
     const px=X(x),py=Y(groundHeight(x));line([[px,py],[px,py-64]],'#595758',3);ctx.fillStyle='#eae4bf';ctx.fillRect(px-23,py-78,58,23);ctx.fillStyle='#514047';ctx.font='11px Trebuchet MS';ctx.textAlign='center';ctx.fillText(label,px+6,py-62);
     if(x===FINISH+3){for(let a=0;a<5;a++)for(let b=0;b<2;b++){ctx.fillStyle=(a+b)%2?'#f5efd7':'#353437';ctx.fillRect(px+a*8,py-112+b*8,8,8);}line([[px,py-60],[px,py-114]],'#595758',3);}
@@ -393,7 +397,9 @@ function frame(now) {
   let sceneryEnd=physicsEnd,smokeEnd=physicsEnd;
   if(needsRedraw || sim.elapsed!==lastDrawnTime){
     const cameraDt=Math.min(.05,Math.max(0,(now-lastDrawAt)/1000));
-    camera.x=pos.x;camera.y+=(pos.y-camera.y)*(1-Math.exp(-cameraDt*3));
+    const yardView=Math.max(0,Math.min(1,(14-pos.x)/9));
+    camera.x=pos.x-2.3*yardView;
+    camera.y+=(pos.y+.72*yardView-camera.y)*(1-Math.exp(-cameraDt*3));
     scenery();if(profiling)sceneryEnd=performance.now();
     drawExhaust();if(profiling)smokeEnd=performance.now();
     car();wheelSpray.draw(ctx,X,Y,scale,groundHeight);
@@ -423,7 +429,7 @@ function frame(now) {
   $('road-pay').textContent=sim.elapsed<receiptUntil ? roadReceipt : nextPost ?
     'До поста '+Math.max(0,Math.ceil(nextPost[0]-distance))+' м · +'+nextPost[1]+' мон.' : 'Все посты пройдены';
   const surface=sim.wetKind.includes('mud')?'Грязь':sim.wetKind.includes('water')?'Лужа':
-    BRIDGES.some(([a,b])=>pos.x>=a && pos.x<=b)?'Мост':'Асфальт';
+    BRIDGES.some(([a,b])=>pos.x>=a && pos.x<=b)?'Мост':pos.x>=SETTS[0]&&pos.x<=SETTS[1]?'Брусчатка':'Асфальт';
   $('road-state').textContent=surface+' · грязь на кузове '+Math.round(sim.dirt*100)+'%';
   const span = sim.elapsed - telemetryTime;
   if (span > .025 || telemetryTime === 0) {
@@ -435,7 +441,7 @@ function frame(now) {
   $('nitro-charge').textContent=Math.round(sim.nitroCharge*100)+'%';$('nitro').classList.toggle('active',sim.boosting);
   $('pressure-live').textContent=`Задние ${sim.tires[0].pressureBar.toFixed(2)} / Передние ${sim.tires[1].pressureBar.toFixed(2)} бар`;
   $('rear').value=sim.joints[0].getJointTranslation();$('front').value=sim.joints[1].getJointTranslation();
-  if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Машина перевернулась. Нажми R для нового заезда.':pos.x>53&&pos.x<91?'Брусчатка':pos.x>116&&pos.x<163?'Подъём':pos.x>333&&pos.x<433?'Перевал':pos.x>498&&pos.x<563?'Спуск к бухте':pos.x>663&&pos.x<753?'Последний гребень':sim.elapsed<5?'До брусчатки 55 м':'';}
+  if(!finished){const a=Math.abs(Math.atan2(Math.sin(sim.body.getAngle()),Math.cos(sim.body.getAngle())));$('notice').textContent=a>1.8?'Машина перевернулась. Нажми R для нового заезда.':stationAt(pos.x)!==undefined?(sim.nitroCharge>=.999?'АЗС · баллон полный':'АЗС · остановись и держи тормоз для заправки N₂O'):pos.x>=SETTS[0]&&pos.x<=SETTS[1]?'Брусчатка':pos.x>116&&pos.x<163?'Подъём':pos.x>333&&pos.x<433?'Перевал':pos.x>498&&pos.x<563?'Спуск к бухте':pos.x>663&&pos.x<753?'Последний гребень':pos.x<6?'Гараж · выезд направо':'';}
   }
   if(profiling&&!paused){
     samples.push({gap:frameGap,physics:physicsEnd-start,scenery:sceneryEnd-physicsEnd,smoke:smokeEnd-sceneryEnd,total:performance.now()-start});

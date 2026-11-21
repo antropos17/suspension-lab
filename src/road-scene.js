@@ -1,4 +1,4 @@
-import { BRIDGES, HUMPS, POOLS, groundHeight } from './terrain.js';
+import { BRIDGES, HUMPS, POOLS, SETTS, FUEL_STATIONS, YARD_WALL, groundHeight } from './terrain.js';
 import { ROAD_STOPS } from './garage.js';
 
 function grain(){
@@ -18,8 +18,11 @@ function lampGlow(){
   c.fillStyle=g;c.fillRect(0,0,96,96);return tile;
 }
 
-export function createRoadScene(c){
+export function createRoadScene(c,invalidate){
   const grit=c.createPattern(grain(),'repeat'),glow=lampGlow();
+  const buildings=['courtyard','petrol-stop'].map(name=>{
+    const img=new Image();img.onload=invalidate;img.src='assets/'+name+'.webp';return img;
+  });
   function path(points,color,width){
     c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));
     c.strokeStyle=color;c.lineWidth=width;c.lineJoin='round';c.stroke();
@@ -31,11 +34,35 @@ export function createRoadScene(c){
   const bar=(x,y,w,h,color)=>{c.fillStyle=color;c.fillRect(x,y,w,h);};
   return function road({X,Y,scale,left,right,height,ground,claimed}){
     const at=x=>Y(groundHeight(x)),road=ground.map(p=>[X(p.x),Y(p.y)]);
+    function building(img,x,y,w){
+      if(!img.naturalWidth || x>right || x+w<left)return;
+      const h=w*img.naturalHeight/img.naturalWidth;
+      c.drawImage(img,X(x),Y(y+h),w*scale,h*scale);
+    }
+    if(left<8){
+      building(buildings[0],-3.35,0,9.2);
+      // End elevation of the courtyard gate. The right jamb meets its collider.
+      if(left<YARD_WALL+.2){
+        const wx=X(YARD_WALL),wy=at(YARD_WALL);
+        bar(wx-3.2*scale,wy-2.1*scale,2.95*scale,2.2*scale,'#54494a');
+        for(let n=1;n<16;n++)bar(wx-(.26+n*.18)*scale,wy-2.05*scale,1,2.1*scale,'#302f33');
+        bar(wx-.42*scale,wy-4.3*scale,.42*scale,4.4*scale,'#938878');
+        for(let n=1;n<16;n++)bar(wx-.42*scale,wy-n*.27*scale,.42*scale,1,'#5f5b55');
+        bar(wx-.48*scale,wy-4.3*scale,.48*scale,.13*scale,'#b7ac97');
+      }
+    }
+    for(const pump of FUEL_STATIONS){
+      const w=8.6,x=pump-w*.40;
+      if(x>right||x+w<left)continue;
+      const y=groundHeight(pump)+.08;
+      bar(X(x),Y(y),w*scale,.85*scale,'#756c60');
+      building(buildings[1],x,y,w);
+    }
     const edge=[...road,[road.at(-1)[0],height+2],[road[0][0],height+2]];
     c.save();c.beginPath();c.rect(road[0][0],-height,road.at(-1)[0]-road[0][0],height*3);
     for(const [a,b] of BRIDGES)if(b>left&&a<right)c.rect(X(a),-height,(b-a)*scale,height*3);
     c.clip('evenodd');
-    fill(edge,'#494840');
+    fill(edge,'#504943');
     const strip=(a,b,col)=>fill([...road.map(([x,y])=>[x,y+a*scale]),...road.slice().reverse().map(([x,y])=>[x,y+b*scale])],col);
     strip(0,.12,'#525353');strip(.12,.22,'#323635');strip(.22,.34,'#625d50');
     c.save();c.beginPath();edge.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.clip();
@@ -50,6 +77,20 @@ export function createRoadScene(c){
       }
     }
     c.restore();
+    // Two staggered courses of dressed stone follow the collision profile.
+    if(left<SETTS[1] && right>SETTS[0]){
+      const colors=['#89817a','#726f6c','#a09689','#817e78','#948d82'];
+      for(let row=0;row<2;row++){
+        const offset=row*.17,depth=row*.095*scale;
+        for(let j=Math.floor((Math.max(left,SETTS[0])-offset)/.34);j*.34+offset<Math.min(right,SETTS[1]);j++){
+          const x=Math.max(SETTS[0],j*.34+offset),end=Math.min(SETTS[1],(j+1)*.34+offset-.014);
+          if(end<=x)continue;
+          const y1=at(x)+depth+.6,y2=at(end)+depth+.6;
+          fill([[X(x),y1],[X(end),y2],[X(end)-1,y2+.082*scale],[X(x)+.5,y1+.082*scale]],colors[(j*7+row*3+Math.floor(j/5))%5]);
+          path([[X(x)+1,y1+.5],[X(end)-1,y2+.5]],'#b5a799',.75);
+        }
+      }
+    }
     for(const [a,b] of BRIDGES){
       if(a>right||b<left)continue;
       const x0=X(a),x1=X(b),y0=at(a),y1=at(b),water=Math.max(y0,y1)+scale*1.55;
@@ -100,6 +141,7 @@ export function createRoadScene(c){
     }
     for(let i=Math.floor((left-1)/14);i<=(right+1)/14;i++){
       const x=i*14+1.8,px=X(x),py=at(x),s=scale,top=py-s*3.0,bulb=px+s*.55;
+      if(x<7 || FUEL_STATIONS.some(p=>Math.abs(p-x)<4.5))continue;
       c.save();
       const pool=c.createRadialGradient(bulb,py,0,bulb,py,s*1.75);
       pool.addColorStop(0,'rgba(255,218,145,.17)');pool.addColorStop(1,'rgba(255,218,145,0)');

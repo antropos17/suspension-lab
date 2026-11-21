@@ -54,3 +54,36 @@ test('the same launch travels less on a muddy bed than on its dry duplicate',()=
  assert.ok(mud.travel>0 && mud.travel<dry.travel*.93);
  assert.ok(mud.speed<dry.speed*.90);
 });
+
+test('maximum RWD holds full throttle over the cobbles with a bounded nose-up angle',()=>{
+  const sim=createSimulation({drive:'rwd',levels:Array(8).fill(8),kits:[true,true,true]});
+  for(let i=0;i<120;i++)sim.step();
+  let peak=-Infinity;
+  for(let i=0;i<2400 && sim.body.getPosition().x<96;i++){
+    sim.step(1);
+    if(sim.body.getPosition().x>=55)peak=Math.max(peak,sim.body.getAngle());
+  }
+  assert.ok(sim.body.getPosition().x>=96);
+  assert.ok(peak<15*Math.PI/180,'excessive pitch: '+peak);
+});
+
+test('held reverse stops at the courtyard wall and forward drives out again',()=>{
+  const sim=createSimulation({drive:'rwd',levels:Array(8).fill(8),kits:[true,true,true]});
+  for(let i=0;i<120;i++)sim.step();
+  for(let i=0;i<1800;i++){
+    sim.step(-1);
+    assert.ok(sim.body.getPosition().x>-7.6 && sim.body.getPosition().y>.4);
+  }
+  assert.ok(sim.body.getPosition().x<-4 && Math.abs(sim.body.getLinearVelocity().x)<.1);
+  for(let i=0;i<360;i++)sim.step(1);
+  assert.ok(sim.body.getPosition().x>3);
+});
+
+test('a stopped car can fill an empty nitro bottle at a pump by holding the brake',()=>{
+  const sim=createSimulation({levels:Array(8).fill(1)});
+  for(let i=0;i<1800 && sim.body.getPosition().x<13;i++)sim.step(1,false,true);
+  assert.ok(sim.body.getPosition().x>=13 && sim.nitroCharge<.1);
+  for(let i=0;i<520;i++)sim.step(0,true);
+  assert.ok(Math.abs(sim.body.getPosition().x-14)<2.4);
+  assert.equal(sim.nitroCharge,1);
+});

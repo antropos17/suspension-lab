@@ -2,6 +2,10 @@ import { FINISH } from './vehicle-constants.js';
 export const GROUND_START = -40;
 export const GROUND_STEP = .4;
 export const GROUND_COUNT = Math.ceil((FINISH+80-GROUND_START)/GROUND_STEP);
+export const YARD_WALL = -7.6;
+export const SETTS = [55,90];
+export const FUEL_STATIONS = [14,187,495.6,712.8];
+export const stationAt = x => FUEL_STATIONS.find(pump=>Math.abs(x-pump)<=2.4);
 
 function landscape(x) {
   if (x < 12) return 0;
@@ -16,8 +20,13 @@ function landscape(x) {
     return (1-blend)*shortWaves+blend*rolling+
       hill(330,100,4.8)+hill(495,65,-2.5)+hill(660,90,3.9);
   }
-  return shortWaves
-    + (x > 55 && x < 90 ? .23 * Math.sin((x - 55) * 2.4) ** 2 : 0)
+  // Setts sit on a graded bed. Blend its approaches to avoid a ramp at either joint.
+  const edge=Math.min(x-SETTS[0],SETTS[1]-x);
+  const blend=Math.max(0,Math.min(1,(x-29)/7,(97-x)/7));
+  const grade=blend*blend*(3-2*blend);
+  const bed=.83*Math.cos((x-30)*.085);
+  const stones=edge>0 ? .029*Math.min(1,edge)*Math.sin((x-55)*2.4)**2 : 0;
+  return shortWaves+(bed-shortWaves)*grade+stones
     + (x > 120 && x < 160 ? 2.8 * Math.sin((x - 120) / 40 * Math.PI) ** 2 : 0);
 }
 
