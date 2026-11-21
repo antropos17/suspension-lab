@@ -1,5 +1,5 @@
 import { createSimulationClient } from './simulation-client.js';
-import { FINISH, STEP } from './vehicle-constants.js';
+import { FINISH, STEP, metricHP } from './vehicle-constants.js';
 import { createExhaust } from './exhaust.js';
 import { createRoadScene } from './road-scene.js';
 import { createWheelSpray } from './wheel-spray.js';
@@ -16,6 +16,7 @@ import { createShop } from './shop.js';
 import { createGarageProfile } from './garage-profile.js';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d');
+const speedNeedle=$('speed-needle');
 const smokeCanvas=document.createElement('canvas'),smokeCtx=smokeCanvas.getContext('2d');
 const SMOKE_RESOLUTION=.5;
 const drawBaku=createBakuBackdrop(()=>{needsRedraw=true;});
@@ -55,6 +56,10 @@ function collectRoadPay(meters){
     roadReceipt='Пост '+garage.roadStops+' · +'+pay.coins+' мон.'+(pay.gems?' · +'+pay.gems+' алм.':'');
     receiptUntil=sim.elapsed+3;
     drawShop(garage);
+    if(!reduceMotion.matches){
+      $('road-pay').animate([{transform:'translateY(5px)',opacity:.35},{transform:'translateY(0)',opacity:1}],{duration:200,easing:'ease-out'});
+      $('wallet').animate([{transform:'translateY(0)'},{transform:'translateY(-3px)',offset:.4},{transform:'translateY(0)'}],{duration:240});
+    }
   })).finally(()=>{collecting=false;});
 }
 function flushDistance() { profile.savePeak(routePeak); }
@@ -221,8 +226,8 @@ function scenery() {
   drawRoad({X,Y,scale,left,right,height,ground:visibleGround(left,right),claimed:garage.roadStops});
   for(const [x,label] of [[1,'Старт'],[56,'Камень'],[118,'Подъём'],[333,'Перевал'],[498,'Спуск'],[663,'Гребень'],[FINISH+3,'Финиш']]) {
     if(x<left||x>right)continue;
-    const px=X(x),py=Y(groundHeight(x));line([[px,py],[px,py-64]],'#58644d',3);ctx.fillStyle='#eae4bf';ctx.fillRect(px-23,py-78,58,23);ctx.fillStyle='#4c6148';ctx.font='11px Trebuchet MS';ctx.textAlign='center';ctx.fillText(label,px+6,py-62);
-    if(x===FINISH+3){for(let a=0;a<5;a++)for(let b=0;b<2;b++){ctx.fillStyle=(a+b)%2?'#f5efd7':'#355347';ctx.fillRect(px+a*8,py-112+b*8,8,8);}line([[px,py-60],[px,py-114]],'#58644d',3);}
+    const px=X(x),py=Y(groundHeight(x));line([[px,py],[px,py-64]],'#595758',3);ctx.fillStyle='#eae4bf';ctx.fillRect(px-23,py-78,58,23);ctx.fillStyle='#514047';ctx.font='11px Trebuchet MS';ctx.textAlign='center';ctx.fillText(label,px+6,py-62);
+    if(x===FINISH+3){for(let a=0;a<5;a++)for(let b=0;b<2;b++){ctx.fillStyle=(a+b)%2?'#f5efd7':'#353437';ctx.fillRect(px+a*8,py-112+b*8,8,8);}line([[px,py-60],[px,py-114]],'#595758',3);}
   }
 }
 function spring(a,b) {
@@ -248,18 +253,29 @@ function car() {
   if(!xray)drawWheelWells(ctx);ctx.restore();
   sim.wheels.forEach((w,i)=>{
     const p=sim.rims[i].getPosition();
-    const b=local(i===0?-.7:.7,-.08);line([[X(b.x),Y(b.y)],[X(p.x),Y(p.y)]],'#344744',5);
+    const b=local(i===0?-.7:.7,-.08);line([[X(b.x),Y(b.y)],[X(p.x),Y(p.y)]],'#454247',5);
   });
   sim.wheels.forEach((w,i)=>{
     const hub=w.getPosition(),tire=sim.tires[i],r=tire.outerRadius*scale,outline=tire.getOutline();
     // The rendered surface comes directly from the moving collision bodies.
     polygon(tire.nodes.map(n=>{const p=n.getPosition();return [X(p.x),Y(p.y)];}),'#202426');
-    for(const node of tire.nodes){const p=node.getPosition();circle(X(p.x),Y(p.y),tire.skin*scale,'#202426');}
-    polygon(outline.map(p=>[X(hub.x+(p.x-hub.x)*.78),Y(hub.y+(p.y-hub.y)*.78)]),'#303936');
+    const skin=tire.skin*scale;
+    ctx.beginPath();
+    for(const node of tire.nodes){
+      const p=node.getPosition(),x=X(p.x),y=Y(p.y);
+      ctx.moveTo(x+skin,y);ctx.arc(x,y,skin,0,Math.PI*2);
+    }
+    ctx.fillStyle='#202426';ctx.fill();
+    polygon(outline.map(p=>[X(hub.x+(p.x-hub.x)*.78),Y(hub.y+(p.y-hub.y)*.78)]),'#343335');
+    ctx.beginPath();
     outline.forEach((p,j)=>{
       const n=tire.nodes[j].getPosition(),dx=p.x-hub.x,dy=p.y-hub.y;
-      line([[X(hub.x+dx*.88),Y(hub.y+dy*.88)],[X(n.x+(p.x-n.x)*.85),Y(n.y+(p.y-n.y)*.85)]],'#4b514b',1.4);
-      if(xray)line([[X(hub.x+dx*.51),Y(hub.y+dy*.51)],[X(n.x),Y(n.y)]],'#b69a5c',.8);
+      ctx.moveTo(X(hub.x+dx*.88),Y(hub.y+dy*.88));ctx.lineTo(X(n.x+(p.x-n.x)*.85),Y(n.y+(p.y-n.y)*.85));
+    });
+    ctx.strokeStyle='#504e4e';ctx.lineWidth=1.4;ctx.stroke();
+    if(xray)outline.forEach((p,j)=>{
+      const n=tire.nodes[j].getPosition();
+      line([[X(hub.x+(p.x-hub.x)*.51),Y(hub.y+(p.y-hub.y)*.51)],[X(n.x),Y(n.y)]],'#b69a5c',.8);
     });
     ctx.save();ctx.translate(X(hub.x),Y(hub.y));
     ctx.rotate(-w.getAngle());
@@ -377,18 +393,20 @@ function frame(now) {
   scenery();const sceneryEnd=profiling?performance.now():0;drawExhaust();const smokeEnd=profiling?performance.now():0;car();wheelSpray.draw(ctx,X,Y,scale,groundHeight);
   needsRedraw=false;
   if(profiling)profileOutput.dataset.draws=String(++drawCount);
+  const signedSpeed=sim.body.getLinearVelocity().x, speedKmh=Math.abs(signedSpeed)*3.6;
+  const needleDegrees=185+Math.min(120,speedKmh)*170/120;
+  speedNeedle.style.transform='rotate('+needleDegrees.toFixed(2)+'deg)';
   if(now>=hudAt||paused||finished){hudAt=now+100;
   const distance=Math.max(0,Math.min(FINISH,pos.x-3));
-  const signedSpeed=sim.body.getLinearVelocity().x, speedKmh=Math.abs(signedSpeed)*3.6;
   $('speed').textContent=Math.round(speedKmh);
   $('distance').textContent=`${Math.floor(distance)} / ${FINISH} м`;
   $('progress').value=finished?FINISH:distance;
   $('time').textContent=formatTime(sim.elapsed);
-  $('speed-needle').setAttribute('transform','rotate('+(185+Math.min(80,speedKmh)*170/80)+' 90 82)');
+  $('hundred-time').textContent=sim.hundredSeconds===null ? '—' : sim.hundredSeconds.toFixed(2).replace('.',',');
   const power=sim.wheelPowerKW;
   $('launch-time').textContent=sim.launchSeconds===null ? '—' : sim.launchSeconds.toFixed(2).replace('.',',');
-  $('power-live').textContent=power.toFixed(1).replace('.',',');
-  $('power-fill').style.width=Math.min(100,power/spec.powerKW*100)+'%';
+  $('power-live').textContent=metricHP(power).toFixed(1).replace('.',',');
+  $('power-fill').style.transform='scaleX('+Math.min(1,power/spec.powerKW)+')';
   routePeak = Math.max(routePeak, Math.floor(distance));
   if (routePeak >= queuedPeak+25) recordProgress(null,routePeak);
   $('best').textContent = 'Рекорд '+routePeak+' м';
@@ -402,8 +420,7 @@ function frame(now) {
   if (span > .025 || telemetryTime === 0) {
     const accel = span > .025 ? (signedSpeed-telemetrySpeed)/span : 0;
     $('acceleration').textContent=(Math.round(accel*10)/10).toFixed(1).replace('.',',');
-    const fill=$('accel-fill'), extent=Math.min(50,Math.abs(accel)*5);
-    fill.style.left=(accel<0 ? 50-extent : 50)+'%'; fill.style.width=extent+'%';
+    $('accel-fill').style.transform='scaleX('+Math.max(-1,Math.min(1,accel/10))+')';
     telemetrySpeed = signedSpeed; telemetryTime = sim.elapsed;
   }
   $('nitro-charge').textContent=Math.round(sim.nitroCharge*100)+'%';$('nitro').classList.toggle('active',sim.boosting);

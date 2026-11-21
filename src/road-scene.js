@@ -116,10 +116,10 @@ export function createRoadScene(c){
       const px=X(x),py=at(x)-4,done=i<claimed;
       bar(px-2,py-1.02*scale,4,1.02*scale,'#5e655b');
       const cy=py-scale*1.05;
-      c.fillStyle=done?'#52615a':'#d8bd78';c.beginPath();c.arc(px,cy,12,0,Math.PI*2);c.fill();
-      c.strokeStyle=done?'#9ba997':'#705936';c.lineWidth=1.5;c.stroke();
+      c.fillStyle=done?'#565257':'#d8bd78';c.beginPath();c.arc(px,cy,12,0,Math.PI*2);c.fill();
+      c.strokeStyle=done?'#aba6a6':'#705936';c.lineWidth=1.5;c.stroke();
       c.fillStyle=done?'#e9eadc':'#433825';c.textAlign='center';c.font='bold 11px Bahnschrift, sans-serif';c.fillText(done?'✓':'+'+coins,px,cy+4);
-      if(gems&&!done){c.fillStyle='#b4dfdb';c.fillText('◆',px+10,cy-8);}
+      if(gems&&!done){c.fillStyle='#ccd7e3';c.fillText('◆',px+10,cy-8);}
     });
   };
 }

@@ -64,7 +64,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   });
   const tires = wheels.map(w=>makeTire(w,spec,pressure));
   let nitroCharge=1, boosting=false;
-  let launchStarted=null, launchSeconds=null;
+  let launchStarted=null, launchSeconds=null, hundredSeconds=null;
   const launchTarget=5/3.6;
   function setBuild(nextLevels, nextKits) {
     const next = buildSpec(nextLevels,nextKits);
@@ -86,7 +86,11 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
         tires[i]=makeTire(wheel,next,old.inflationBar);
       });
     }
-    launchStarted=null;launchSeconds=null;
+    if(!levels || nextLevels.some((level,i)=>level!==levels[i]) ||
+      nextKits?.some((kit,i)=>kit!==kits?.[i])){
+      launchStarted=null;launchSeconds=null;hundredSeconds=null;
+    }
+    levels=nextLevels;kits=nextKits;
     spec = next;
     body.setAngularDamping(.6+.95*spec.aero);
   }
@@ -150,6 +154,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
     get dirt(){return dirt;}, spray, wetKind,
     get elapsed() { return elapsed; },
     get launchSeconds() { return launchSeconds; },
+    get hundredSeconds() { return hundredSeconds; },
     get wheelPowerKW() { return wheelPowerKW; },
     get engineLoad() { return engineLoad; },
     get accelerator() { return accelerator; },
@@ -189,13 +194,17 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
         suspensionForces();tires.forEach(t=>t.applyPressure());world.step(h,8,4);
       }
       const newSpeed=body.getLinearVelocity().x;
-      if(throttle<=0 || brake || newSpeed<-.04)launchStarted=null;
-      else if(launchStarted===null && Math.abs(speed)<.04){
-        launchStarted=elapsed;launchSeconds=null;
+      if(newSpeed<-.04 || ((brake || throttle<=0) && Math.abs(newSpeed)<.04))launchStarted=null;
+      else if(launchStarted===null && throttle>0 && !brake && Math.abs(speed)<.04){
+        launchStarted=elapsed;launchSeconds=null;hundredSeconds=null;
       }
-      if(launchStarted!==null && speed<launchTarget && newSpeed>=launchTarget){
+      if(launchStarted!==null && launchSeconds===null && speed<launchTarget && newSpeed>=launchTarget){
         const fraction=(launchTarget-speed)/(newSpeed-speed);
         launchSeconds=elapsed+fraction*STEP-launchStarted;
+      }
+      if(launchStarted!==null && speed<100/3.6 && newSpeed>=100/3.6){
+        const fraction=(100/3.6-speed)/(newSpeed-speed);
+        hundredSeconds=elapsed+fraction*STEP-launchStarted;
         launchStarted=null;
       }
       const torque = motors.reduce((sum,j)=>sum+Math.abs(j.getMotorTorque(1/h)),0);

@@ -7,6 +7,7 @@ function blend(out,a,b,t){
   for(const key of ['elapsed','engineLoad','wheelPowerKW','accelerator','nitroCharge','dirt'])out[key]=mix(a[key],b[key],t);
   out.boosting=t<.5?a.boosting:b.boosting;
   out.launchSeconds=t<1?a.launchSeconds:b.launchSeconds;
+  out.hundredSeconds=t<1?a.hundredSeconds:b.hundredSeconds;
   point(out.body.position,a.body.position,b.body.position,t);
   point(out.body.velocity,a.body.velocity,b.body.velocity,t);
   out.body.angle=mix(a.body.angle,b.body.angle,t);

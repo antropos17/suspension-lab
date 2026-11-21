@@ -179,3 +179,13 @@ Fourteen checkpoints award wallet currency once per profile. The first two pay 1
 On a paired rear-drive launch with identical terrain geometry, the car reached 1.62 m/s on dry asphalt and 1.27 m/s in mud after 100 game steps. A fully upgraded car completed 800 m on all-wheel, front-wheel and rear-wheel drive in 56.0, 57.7 and 56.5 simulated seconds respectively, without nitro or inversion.
 
 Final verification passed all 43 automated tests, lint, production build and whitespace checks. The loopback server returned the exact built HTML, stylesheet and both bundles. An initial contact classification regression was fixed by preserving the ground fixture metadata contract. The mud model uses a fixed bed and a level surface with viscous and ploughing resistance. It does not model ruts or bulk fluid displacement.
+
+## 2026-11-21 · Graphite instruments and measured 0–100 km/h
+
+The instrument cluster, workshop and logo now use graphite, warm silver and an oxblood accent. The dial spans 0–120 km/h. The needle reads the interpolated vehicle velocity on each rendered frame. Numerical readouts still refresh at 10 Hz. The tread contact circles and tread marks now share a fill and stroke per wheel. These batches use the same physical nodes. The board settles each unlocked reel, draws the winning line and acknowledges checkpoint payments. Reduced-motion mode skips those effects.
+
+Catalog and instantaneous wheel power are shown in metric horsepower (1 PS = 0.73549875 kW). A standing launch records the independent 5 and 100 km/h crossings using fixed simulation time and interpolation inside the crossing step. Remaining below a threshold leaves its reading blank. Levels 6–8 of the gearbox now allow 55.8, 79.2 and 118.8 km/h. The first five ratios and stock engine retain their progression.
+
+On the actual 800 m course a fully upgraded car with all kits, continuous throttle and no nitro reached 100 km/h after 18.2 s (AWD), 19.0 s (RWD) and 29.1 s (FWD). All three reached the finish without inversion. In the browser the stock build registered 2.88 s to 5 km/h and no 100 km/h time. A slot presentation check counted three reel stops and one line reveal for a forced triple, and zero decorative animations with reduced motion enabled. Rendering changes were checked in the desktop app. No device-wide frame-rate benchmark was taken.
+
+All 44 automated tests passed, including the measured 0–100 crossing and the stock hill regression. Lint, bundled build and whitespace checks passed. The served page, CSS and both JavaScript bundles matched the built files.

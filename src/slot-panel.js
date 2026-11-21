@@ -14,7 +14,7 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
       return tile;
     });
     reel.append(strip);bank.append(reel);
-    return {reel,strip,tiles};
+    return {reel,strip,tiles,moving:false};
   });
   const overlay=document.createElement('canvas');
   overlay.className='winning-lines';overlay.width=overlay.height=300;
@@ -27,7 +27,7 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
     if(changed){
       marks.clearRect(0,0,300,300);
       if(!rolling && result){
-        marks.strokeStyle='#b56320';marks.lineWidth=3;marks.lineCap='round';
+        marks.strokeStyle='#853e4b';marks.lineWidth=3;marks.lineCap='round';
         for(const line of result.lines){
           marks.beginPath();
           for(const [j,i] of line.entries()){
@@ -36,12 +36,19 @@ export function createSlotPanel(slot, bank, button, status, timer, getLevels) {
           }
           marks.stroke();
         }
+        if(lastPhase==='rolling' && result.lines.length && !reduced.matches)
+          overlay.animate([{clipPath:'inset(0 100% 0 0)'},{clipPath:'inset(0)'}],{duration:240,easing:'ease-out'});
       }
     }
     if(changed || rolling){
       button.disabled=locked || rolling;
-      columns.forEach(({reel,strip,tiles},col)=>{
+      columns.forEach((column,col)=>{
+        const {reel,strip,tiles}=column;
         const t=rolling && col!==slot.locked ? Math.min(1,Math.max(0,(now-slot.started)/reelStopTime(col))) : 1;
+        if(column.moving && t===1 && result && !reduced.matches){
+          strip.animate([{translate:'0 -3px'},{translate:'0 1px',offset:.55},{translate:'0 0'}],{duration:145,easing:'ease-out'});
+        }
+        column.moving=t<1;
         const travel=reduced.matches ? (t===1?12:0) : 12*(1-(1-t)**2);
         const step=Math.floor(travel);
         strip.style.transform='translateY('+((step-travel)*100/3)+'%)';

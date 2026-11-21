@@ -185,3 +185,27 @@ test('tires change grip and rolling geometry while wheel force, launch and speed
   assert.ok(Math.abs(runs[0][0]-runs[1][0])<.12,JSON.stringify(runs));
   assert.ok(Math.abs(runs[0][1]-runs[1][1])<.12,JSON.stringify(runs));
 });
+
+test('the 0–100 clock records the physical crossing from rest on a fully tuned car',()=>{
+  const levels=Array(8).fill(8),kits=[true,true,true];
+  const sim=createSimulation({levels,kits});
+  for(let i=0;i<120;i++)sim.step();
+  const start=sim.elapsed, target=100/3.6;
+  for(let i=0;i<35/STEP;i++){
+    const before=sim.body.getLinearVelocity().x, elapsed=sim.elapsed-start;
+    assert.equal(sim.hundredSeconds,null);
+    sim.step(1);
+    const after=sim.body.getLinearVelocity().x;
+    if(after<target)continue;
+    const expected=elapsed+STEP*(target-before)/(after-before);
+    assert.ok(Math.abs(expected-sim.hundredSeconds)<1e-8);
+    assert.ok(sim.launchSeconds<sim.hundredSeconds);
+    sim.setBuild([...levels],[...kits]);
+    sim.step(0,true);
+    assert.ok(Math.abs(expected-sim.hundredSeconds)<1e-8);
+    sim.setBuild([7,...levels.slice(1)],kits);
+    assert.equal(sim.hundredSeconds,null);
+    return;
+  }
+  assert.fail('top build did not reach 100 km/h');
+});

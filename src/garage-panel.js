@@ -1,5 +1,6 @@
 import { PART_NAMES, THRESHOLDS, levelOf, buildSpec, SPECIALS } from './garage.js';
 
+import { metricHP } from './vehicle-constants.js';
 import { paintIcon } from './part-art.js';
 
 const finishes = ['Ржавчина', 'Грунт', 'Эмаль', 'Два тона', 'Утиный хвост', 'Спорт', 'Двойное крыло', 'Гоночный обвес'];
@@ -19,7 +20,7 @@ export function createGaragePanel(left, right, title) {
     const levels = garage.points.map(levelOf);
     const spec = buildSpec(levels,garage.kits);
     const ratings = {
-      power:spec.powerKW.toLocaleString('ru-RU',{maximumFractionDigits:1}),
+      power:metricHP(spec.powerKW).toLocaleString('ru-RU',{maximumFractionDigits:1}),
       force:Math.round(spec.driveForce).toLocaleString('ru-RU'),
       speed:Math.round(spec.topSpeed*3.6).toString(),
       grip:spec.friction.toFixed(2).replace('.',','),
@@ -32,7 +33,7 @@ export function createGaragePanel(left, right, title) {
         changes && previous!==value ? 'было '+previous : '';
       field.textContent=value;
     }
-    const specs = [Math.round(spec.torque)+' Н·м', 'до '+(spec.topSpeed*3.6).toFixed(0)+' км/ч',
+    const specs = [ratings.power+' л.с.', 'до '+(spec.topSpeed*3.6).toFixed(0)+' км/ч',
       'Ø '+Math.round(spec.tireRadius*200)+' см · μ '+spec.friction.toFixed(2), (spec.damperLimit/1000).toFixed(2)+' кН',
       spec.brakeTorque+' Н·м', finishes[levels[5]-1],
       spec.smokeFactor.toFixed(2)+'× копоть', spec.boostDuration.toFixed(1)+' с форсажа'];

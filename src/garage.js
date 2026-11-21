@@ -95,7 +95,7 @@ export function buildSpec([engine, transmission, wheels, suspension, brakes, bod
   const kitFactor = kits[0] ? 1.18 : 1;
   const torque = axleTorque * kitFactor;
   const referenceRadius = .305; // Stock final drive is the catalog reference.
-  const topSpeed = 2.15 + 2.07 * (transmission-1);
+  const topSpeed = [2.15,4.22,6.29,8.36,10.43,15.5,22,33][transmission-1];
   return {
     tireRadius, rimRadius, torque, topSpeed,
     powerKW: [.7, 2.8, 7.5, 14, 24, 37, 55, 82][engine-1] * kitFactor,
