@@ -7,6 +7,20 @@ export const SPECIALS = [
   {name:'Двойной баллон', part:7, price:4, effect:'+60% времени нитро'},
   {name:'Карбоновый обвес', part:5, price:3, effect:'Карбоновые пороги и антикрыло с уровня кузова 4'}
 ];
+// Distances are odometer readings, measured from the spawn at world x=3.
+export const ROAD_STOPS = [
+  [5,12,0],[12,18,0],[39,20,0],[76,24,1],[132,28,0],[198,32,1],
+  [252,36,0],[340,40,1],[436,44,0],[535,48,1],[585,52,0],[665,56,1],[745,60,0],[795,64,2]
+];
+export function claimRoadStops(garage,meters){
+  let coins=0,gems=0;
+  while(garage.roadStops<ROAD_STOPS.length && meters>=ROAD_STOPS[garage.roadStops][0]){
+    const stop=ROAD_STOPS[garage.roadStops++];
+    coins+=stop[1];gems+=stop[2];
+  }
+  garage.coins+=coins;garage.gems+=gems;
+  return {coins,gems};
+}
 export const levelOf = points => THRESHOLDS.filter(value => points >= value).length;
 const bounded = (n, max) => Number.isFinite(n) ? Math.min(max, Math.max(0, Math.floor(n))) : 0;
 
@@ -16,6 +30,7 @@ export function readGarage(raw) {
   return {
     points: PART_NAMES.map((_, i) => bounded(data?.points?.[i], THRESHOLDS.at(-1))),
     best: bounded(data?.best, FINISH),
+    roadStops: bounded(data?.roadStops,ROAD_STOPS.length),
     coins: bounded(data?.coins, Number.MAX_SAFE_INTEGER),
     gems: bounded(data?.gems, Number.MAX_SAFE_INTEGER),
     orders: PART_NAMES.map((_,i)=>data?.orders?.[i] === true),

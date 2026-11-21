@@ -13,13 +13,13 @@
       <canvas id="game" aria-label="Седан на прибрежной трассе в Баку. D — газ, A — задний ход, пробел — тормоз."></canvas>
       <div class="route-hud"><div class="route"><span id="distance">0 / 800 м</span><progress id="progress" max="800" value="0" aria-label="Пройденная дистанция"></progress></div><div class="timer"><span id="time">0:00.0</span><small id="best">Рекорд 0 м</small></div></div>
       <div id="notice" class="notice" role="status">До брусчатки 55 м</div>
-      <div class="terrain-label">Bakı bulvarı</div>
+      <div class="terrain-label" id="road-pay">До поста 5 м · +12 мон.</div>
       <div id="overlay" class="overlay" hidden><div><p id="overlay-caption">Take a breath.</p><h2 id="overlay-title">Paused</h2><button id="resume">Keep driving</button></div></div>
       <div class="pedals"><button id="nitro" data-control="nitro" aria-label="Нитро, удерживать N" aria-keyshortcuts="N">N₂O <b id="nitro-charge">100%</b></button><button data-control="reverse" aria-label="Назад">◀</button><button data-control="brake" class="brake" aria-label="Тормоз">Тормоз</button><button data-control="forward" aria-label="Газ">▶</button></div>
     </section>
     <div class="instruments">
       <section class="cluster" aria-labelledby="cluster-title">
-        <div class="instrument-heading"><h2 id="cluster-title">Приборная панель</h2><span id="drive-readout">Полный привод</span></div>
+        <div class="instrument-heading"><h2 id="cluster-title">Приборная панель</h2><span class="road-instruments"><span id="road-state">Асфальт · грязь на кузове 0%</span><span id="drive-readout">Полный привод</span></span></div>
         <div class="instruments-live">
           <div class="speedometer" aria-label="Скорость">
             <svg viewBox="0 0 180 92" aria-hidden="true" class="speed-dial"><path class="dial-marks" d="M14.29 75.38L24.25 76.25 M14.99 69.78L19.92 70.59 M16.10 64.26L20.96 65.43 M17.62 58.83L22.38 60.35 M19.53 53.53L24.17 55.40 M21.84 48.39L30.81 52.81 M24.52 43.43L28.82 45.96 M27.55 38.68L31.66 41.53 M30.94 34.17L34.82 37.32 M34.64 29.93L38.29 33.35 M38.66 25.97L45.41 33.34 M42.95 22.32L46.04 26.24 M47.50 18.99L50.30 23.14 M52.29 16.02L54.77 20.36 M57.28 13.40L59.43 17.92 M62.45 11.17L66.08 20.49 M67.78 9.32L69.24 14.10 M73.23 7.87L74.33 12.75 M78.77 6.83L79.51 11.78 M84.37 6.21L84.74 11.20 M90.00 6.00L90.00 16.00 M95.63 6.21L95.26 11.20 M101.23 6.83L100.49 11.78 M106.77 7.87L105.67 12.75 M112.22 9.32L110.76 14.10 M117.55 11.17L113.92 20.49 M122.72 13.40L120.57 17.92 M127.71 16.02L125.23 20.36 M132.50 18.99L129.70 23.14 M137.05 22.32L133.96 26.24 M141.34 25.97L134.59 33.34 M145.36 29.93L141.71 33.35 M149.06 34.17L145.18 37.32 M152.45 38.68L148.34 41.53 M155.48 43.43L151.18 45.96 M158.16 48.39L149.19 52.81 M160.47 53.53L155.83 55.40 M162.38 58.83L157.62 60.35 M163.90 64.26L159.04 65.43 M165.01 69.78L160.08 70.59 M165.71 75.38L155.75 76.25"/><g class="dial-numbers"><text x="35.21" y="77.21">0</text><text x="52.84" y="41.45">20</text><text x="90.00" y="27.00">40</text><text x="127.16" y="41.45">60</text><text x="144.79" y="77.21">80</text></g><g id="speed-needle"><path d="M80 80 158 81.5 158 82.5 80 84Z"/><circle cx="90" cy="82" r="4"/></g></svg>
@@ -58,7 +58,7 @@
       </div>
       <div class="part-rack" id="rack-right" aria-label="Подвеска, тормоза и кузов"></div>
       <details class="tuning-shop"><summary>Заказы мастерской</summary>
-      <p>За монеты закажи двойное улучшение, за алмазы — спецкомплект. Заказ установится, когда выпадет линия его детали.</p>
+      <p>Дорожные посты дают монеты и алмазы один раз. За монеты закажи двойное улучшение, за алмазы — спецкомплект. Заказ установится, когда выпадет линия его детали.</p>
       <div id="shop-items"></div><div id="shop-notice" role="status"></div>
       </details>
     </section>

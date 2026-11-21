@@ -1,5 +1,5 @@
 import { World, Vec2, Edge, Box, Circle, Polygon, RevoluteJoint, PrismaticJoint } from 'planck';
-import { terrainHeight, GROUND_START, GROUND_STEP, GROUND_COUNT } from './terrain.js';
+import { terrainHeight, poolAt, materialAt, GROUND_START, GROUND_STEP, GROUND_COUNT } from './terrain.js';
 import { archPoint } from './vehicle-geometry.js';
 import { createPneumaticTire, RIM_RADIUS } from './pneumatic-tire.js';
 import { createExhaustMount } from './exhaust-mount.js';
@@ -22,7 +22,8 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
     const edge = new Edge(points[i - 1], points[i]);
     if (i > 1) edge.setPrevVertex(points[i - 2]);
     if (i < points.length - 1) edge.setNextVertex(points[i + 1]);
-    ground.createFixture(edge, { friction: .95 });
+    const material=heightAt===terrainHeight ? materialAt((points[i-1].x+points[i].x)*.5) : 'asphalt';
+    ground.createFixture(edge, {friction:material==='mud'?.40:material==='water'?.68:.95});
   }
   let spec = levels ? buildSpec(levels,kits) : {tireRadius:TIRE_RADIUS,rimRadius:RIM_RADIUS,torque:2400,fittedTorque:2400,powerKW:Infinity,launch:5,wheelSpeed:22,friction:1.5,damperLimit:3000,brakeTorque:1600,boostDuration:1.6,boostFactor:1.34,aero:0};
   const hubY = levels ? spec.tireRadius + .05 : .57;
@@ -93,6 +94,37 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   const exhaustMount = levels ? createExhaustMount(body,-2.19,-.46) : createExhaustMount(body);
   let elapsed = 0;
   let wheelPowerKW = 0, engineLoad = 0, accelerator = 0;
+  let dirt=0;
+  const spray=[0,0], wetKind=['',''];
+  // Viscous shear on immersed tread elements; wheel slip stirs the layer even at low body speed.
+  function roadForces(h){
+    for(let i=0;i<tires.length;i++){
+      const tire=tires[i],hub=wheels[i],center=hub.getPosition(),pool=poolAt(center.x);
+      let immersion=0;
+      if(pool && center.y-tire.outerRadius<pool.level+.08){
+        const mud=pool.kind==='mud';
+        for(const node of tire.nodes){
+          const p=node.getPosition();
+          if(p.x<=pool.start || p.x>=pool.end)continue;
+          const depth=Math.min(1,Math.max(0,(pool.level-p.y+tire.skin)/(tire.skin*2)));
+          if(depth===0)continue;
+          immersion+=depth;
+          const v=node.getLinearVelocity(),k=(mud?58:9)*depth;
+          node.applyForceToCenter(Vec2(-k*v.x,-k*v.y),true);
+        }
+        if(immersion){
+          const vx=hub.getLinearVelocity().x, spin=Math.abs(hub.getAngularVelocity())*tire.outerRadius;
+          // Ploughing resistance on the rolling wheel rises with wetted tread and travel speed.
+          hub.applyForceToCenter(Vec2(-(mud?28:3)*immersion*Math.tanh(vx),0),true);
+          const activity=Math.min(1,immersion/6)*Math.min(2,(Math.abs(vx)+spin)/5);
+          spray[i]=activity;wetKind[i]=pool.kind;
+          dirt=Math.max(0,Math.min(1,dirt+h*activity*(mud?.64:-.30)));
+          continue;
+        }
+      }
+      spray[i]=0;wetKind[i]='';
+    }
+  }
   function suspensionForces() {
     joints.forEach((joint, i) => {
       const travel = joint.getJointTranslation(), speed = joint.getJointSpeed();
@@ -115,6 +147,7 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
   }
   return {
     world, body, wheels, rims, joints, tires, stops, points, exhaustMount, motors, setBuild,
+    get dirt(){return dirt;}, spray, wetKind,
     get elapsed() { return elapsed; },
     get launchSeconds() { return launchSeconds; },
     get wheelPowerKW() { return wheelPowerKW; },
@@ -148,7 +181,10 @@ export function createSimulation({ frequency = 1.7, damping = .5, drive = 'awd',
       const speed=body.getLinearVelocity().x;
       const downforce=(spec.aero || 0)*1.8*speed*speed;
       const h=STEP/substeps;
+      const onSoftRoad=heightAt===terrainHeight && wheels.some(w=>poolAt(w.getPosition().x));
+      if(!onSoftRoad){spray.fill(0);wetKind.fill('');}
       for(let i=0;i<substeps;i++){
+        if(onSoftRoad)roadForces(h);
         if(downforce)body.applyForceToCenter(Vec2(0,-downforce),true);
         suspensionForces();tires.forEach(t=>t.applyPressure());world.step(h,8,4);
       }

@@ -7,7 +7,7 @@ function ellipse(c,x,y,rx,ry,color){c.beginPath();c.ellipse(x,y,rx,ry,0,0,Math.P
 export function createBakuBackdrop(invalidate=()=>{}){
  const panorama=new Image();panorama.src='/assets/baku-panorama.png';panorama.decoding='async';
  panorama.onload=invalidate;
- const wash=document.createElement('canvas');let cachedWidth=0,cachedHeight=0;
+ const wash=document.createElement('canvas');let cachedWidth=0,cachedHeight=0,twilight;
  return function drawBaku(c,{width,height,camera,scale}){
   const unit=Math.max(.65,Math.min(1.3,height/440));
   const lift=Math.max(-12,Math.min(12,(camera.y-1.1)*scale*.025));
@@ -17,6 +17,10 @@ export function createBakuBackdrop(invalidate=()=>{}){
   const base=Math.max(height*horizon,panoramaHeight*.77)-lift;
   if(cachedWidth!==width||cachedHeight!==height){
    cachedWidth=width;cachedHeight=height;wash.width=Math.ceil(width);wash.height=Math.ceil(height);
+   twilight=c.createLinearGradient(0,0,0,height);
+   twilight.addColorStop(0,'rgba(11,21,45,.65)');
+   twilight.addColorStop(.60,'rgba(44,34,52,.46)');
+   twilight.addColorStop(1,'rgba(23,32,42,.58)');
    const w=wash.getContext('2d');
    const sky=w.createLinearGradient(0,0,0,height);sky.addColorStop(0,'#97bfe3');sky.addColorStop(.65,'#c2d5e2');sky.addColorStop(1,'#6698ad');rect(w,0,0,width,height,sky);
    const sea=w.createLinearGradient(0,height*.64,0,height);sea.addColorStop(0,'#4b829d');sea.addColorStop(1,'#83aeb5');rect(w,0,height*.64,width,height*.36,sea);
@@ -44,5 +48,6 @@ export function createBakuBackdrop(invalidate=()=>{}){
     for(const sign of [-1,1]){ellipse(c,x+sign*8*unit,walk-40*unit,3*unit,4*unit,'#ecdfbc');line(c,[[x+sign*11*unit,walk-44*unit],[x+sign*5*unit,walk-44*unit]],'#3c5359',unit);}
    }
   }
+  rect(c,0,0,width,height,twilight);
  };
 }

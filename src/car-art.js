@@ -1,6 +1,24 @@
 const shells = new Image();
 shells.src = 'assets/sedan-shells.webp';
 
+// A fixed splatter mask follows the repaired shell and leaves both wheel openings clear.
+let grimeAtlas;
+function grime(){
+  if(grimeAtlas)return grimeAtlas;
+  grimeAtlas=document.createElement('canvas');
+  const w=grimeAtlas.width=shells.naturalWidth,h=grimeAtlas.height=shells.naturalHeight/4;
+  const c=grimeAtlas.getContext('2d');let seed=137;
+  const roll=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+  for(let j=0;j<2600;j++){
+    const x=roll(),rise=roll()**2.5,arch=Math.max(0,1-Math.min(Math.abs(x-.22),Math.abs(x-.78))*5);
+    const y=1-rise*(.28+.38*arch);
+    c.fillStyle=['#69543d','#876a49','#524839','#9a8162'][j%4];
+    c.beginPath();c.ellipse(x*w,y*h,1+roll()*4,1+roll()*2,-.35,0,Math.PI*2);c.fill();
+  }
+  c.globalCompositeOperation='destination-in';c.drawImage(shells,0,0,w,h,0,0,w,h);
+  return grimeAtlas;
+}
+
 // Atlas rows share axle centres at x = ±1.25 m; the open arches reveal the live tires.
 function paintShell(ctx,row) {
   const height=shells.naturalHeight/4;
@@ -19,7 +37,7 @@ export function drawWheelWells(ctx) {
   }
 }
 
-export function drawClassicBody(ctx,xray,soot,levels,kits) {
+export function drawClassicBody(ctx,xray,soot,levels,kits,dirt) {
   if(!shells.naturalWidth)return;
   const body=levels[5], carbon=kits[2] && body>=4;
   ctx.save();
@@ -60,6 +78,10 @@ export function drawClassicBody(ctx,xray,soot,levels,kits) {
     const stain=ctx.createRadialGradient(-2.04,-.345,0,-2.04,-.345,.085);
     stain.addColorStop(0,'rgba(37,31,27,'+soot*.65+')');stain.addColorStop(1,'rgba(37,31,27,0)');
     ctx.fillStyle=stain;ctx.fillRect(-2.125,-.43,.17,.17);
+  }
+  if(dirt>.003){
+    ctx.globalAlpha*=Math.min(.94,dirt);
+    ctx.scale(1,-1);ctx.drawImage(grime(),-2.24,-.83,4.4,1.41);
   }
   ctx.restore();
 }

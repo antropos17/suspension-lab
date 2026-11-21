@@ -169,3 +169,13 @@ On flat ground at 2.2 bar, stock AWD reached 5 km/h in 2.87 s and ran at 7.00 km
 Desktop browser verification used genuine slot lines. A wheel triple changed the grip coefficient from 1.28 to 1.39. A subsequent engine triple changed rated power from 0.7 to 2.8 kW and starting force from 311 to 672 N. A fresh browser launch on D recorded 2.88 s to 5 km/h. Dashboard and slot were also inspected at a 390 px viewport, with no horizontal page overflow. The production assets were checked against the running local server.
 
 Verification passed all 40 automated tests in 369.56 s, lint, production build and whitespace checks.
+
+## 2026-11-21 · Evening boulevard and road rewards
+
+The 800 m route now has street lighting, a terrain-clipped headlight beam, textured asphalt with storm drains, five marked speed humps, three drivable bridges and twelve water or mud sections. Bridge decks, road markings, puddle beds and contact geometry use the same longitudinal profile. The dashboard reports the current surface, accumulated dirt and the next roadside reward.
+
+Fourteen checkpoints award wallet currency once per profile. The first two pay 12 and 18 coins at 5 and 12 m. The wallet can fund existing workshop orders. A matching three-symbol line still installs the part. In the browser the test garage collected 50 coins across three posts, kept them on reload, and showed the body washing from 100% dirt at the first bridge to 63% in the following water section. The test garage was returned to its stock start afterward.
+
+On a paired rear-drive launch with identical terrain geometry, the car reached 1.62 m/s on dry asphalt and 1.27 m/s in mud after 100 game steps. A fully upgraded car completed 800 m on all-wheel, front-wheel and rear-wheel drive in 56.0, 57.7 and 56.5 simulated seconds respectively, without nitro or inversion.
+
+Final verification passed all 43 automated tests, lint, production build and whitespace checks. The loopback server returned the exact built HTML, stylesheet and both bundles. An initial contact classification regression was fixed by preserving the ground fixture metadata contract. The mud model uses a fixed bed and a level surface with viscous and ploughing resistance. It does not model ruts or bulk fluid displacement.

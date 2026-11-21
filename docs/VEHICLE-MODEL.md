@@ -117,3 +117,7 @@ Implementation reference: [MDN, Using Web Workers](https://developer.mozilla.org
 The game now uses a 0.520 m unloaded tire radius and a 0.275 m rigid rim radius (previously 0.480 / 0.245 m). Both axles spawn 40 mm higher. The liner, painted openings, rolling-speed conversion and wheel-face rendering respect the larger assembly. The contact ring, pressure-volume model and fixed solver step are the same. The wheel and suspension tests exercise the new dimensions; earlier bench values above describe their dated builds.
 
 Stock axle torque is 1850 N·m, motor launch allowance 4.3 rad/s, and stock gear limit 22 rad/s. These are wheel-drive model parameters. Body levels 5–8 add progressively stronger game aero: downward force rises with the square of longitudinal speed and body angular damping rises from 0.6 to 1.55. Downforce enters the sprung body during each substep. Driving remains a consequence of ground contact. The longer hill entrance blends out short ripples and spreads the climb over 40 m.
+
+## Wet asphalt and mud
+
+The contact edge material sets friction to 0.95 on dry asphalt, 0.68 under standing water and 0.40 on muddy beds. The solver applies opposing viscous forces to submerged tread nodes and adds longitudinal ploughing resistance at the axle proportional to immersion. Tire motion in contact with the layer drives spray, mud deposition and washing. The free surface stays level over a fixed roadbed. The model does not simulate rut formation, bulk fluid displacement or hydroplaning.

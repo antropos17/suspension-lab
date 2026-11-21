@@ -158,3 +158,7 @@ footer {font-size:11px;color:#49565d}footer i {display:inline-block;width:8px}
 }
 
 #spin svg {vertical-align:-2px;margin-right:2px}
+
+.road-instruments {display:grid;text-align:right;gap:1px;font-size:11px;color:#e2d7b6}
+#road-pay {display:block;background:#26322de6;color:#f1dfae}
+@media(max-width:480px){#road-pay{top:58px;bottom:auto;right:7px;left:auto;font-size:10px}.road-instruments{font-size:10px}}

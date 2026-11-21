@@ -5,7 +5,7 @@ const point = p => ({ x:p.x, y:p.y });
 // UI thread. Contact nodes are copied without reshaping or terrain projection.
 export function snapshot(sim) {
   return {
-    elapsed:sim.elapsed, launchSeconds:sim.launchSeconds, wheelPowerKW:sim.wheelPowerKW, engineLoad:sim.engineLoad, accelerator:sim.accelerator, nitroCharge:sim.nitroCharge, boosting:sim.boosting,
+    elapsed:sim.elapsed,dirt:sim.dirt,spray:[...sim.spray],wetKind:[...sim.wetKind], launchSeconds:sim.launchSeconds, wheelPowerKW:sim.wheelPowerKW, engineLoad:sim.engineLoad, accelerator:sim.accelerator, nitroCharge:sim.nitroCharge, boosting:sim.boosting,
     body:{position:point(sim.body.getPosition()),angle:sim.body.getAngle(),velocity:point(sim.body.getLinearVelocity())},
     wheels:sim.wheels.map(w=>({position:point(w.getPosition()),angle:w.getAngle()})),
     rims:sim.rims.map(r=>point(r.getPosition())),

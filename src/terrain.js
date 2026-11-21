@@ -3,7 +3,7 @@ export const GROUND_START = -40;
 export const GROUND_STEP = .4;
 export const GROUND_COUNT = Math.ceil((FINISH+80-GROUND_START)/GROUND_STEP);
 
-export function terrainHeight(x) {
+function landscape(x) {
   if (x < 12) return 0;
   const t = x - 12, fade = Math.min(t / 12, 1);
   // Ease short ripples out at the hill entrance so braking leaves a usable contact patch.
@@ -21,6 +21,29 @@ export function terrainHeight(x) {
     + (x > 120 && x < 160 ? 2.8 * Math.sin((x - 120) / 40 * Math.PI) ** 2 : 0);
 }
 
+// All features use world metres and the same longitudinal profile as the tire colliders.
+export const BRIDGES=[[36,44.8],[238.4,264],[574.4,596.8]];
+export const HUMPS=[[19.2,21.2,.075],[96,98.8,.12],[180,182,.09],[314.4,317.2,.14],[708,710.8,.12]];
+export const POOLS = [
+  [6.4,10.8,'water',.032],[24,30.4,'mud',.085],[44.8,50,'water',.07],
+  [100.8,109.2,'mud',.10],[158.4,165.2,'water',.08],[195.6,205.6,'mud',.12],
+  [282.4,294,'water',.10],[331.2,344.8,'mud',.13],[429.6,443.2,'water',.09],
+  [531.2,541.2,'mud',.12],[645.6,657.6,'water',.07],[739.2,748.4,'mud',.12]
+].map(([start,end,kind,depth])=>({start,end,kind,depth,level:Math.min(landscape(start),landscape(end))}));
+export const poolAt=x=>POOLS.find(p=>x>p.start && x<p.end);
+export function terrainHeight(x){
+  for(const [a,b] of BRIDGES){
+    if(x>=a && x<=b)return landscape(a)+(landscape(b)-landscape(a))*(x-a)/(b-a);
+  }
+  let height=landscape(x);
+  for(const [a,b,h] of HUMPS)if(x>a && x<b)height+=h*Math.sin(Math.PI*(x-a)/(b-a))**2;
+  const pool=poolAt(x);
+  if(pool){
+    const t=(x-pool.start)/(pool.end-pool.start), blend=Math.sin(Math.PI*t)**2;
+    height=height*(1-blend)+(pool.level-pool.depth)*blend;
+  }
+  return height;
+}
 // The visible surface and tire deformation use the actual collision segments.
 const heights=Array.from({length:GROUND_COUNT+1},(_,i)=>terrainHeight(GROUND_START+i*GROUND_STEP));
 export function groundHeight(x) {
@@ -28,4 +51,9 @@ export function groundHeight(x) {
   const start = GROUND_START + index * GROUND_STEP;
   const t = Math.max(0, Math.min(1, (x - start) / GROUND_STEP));
   return heights[index] * (1 - t) + heights[index+1] * t;
+}
+
+export function materialAt(x){
+  const pool=poolAt(x);
+  return pool && groundHeight(x)<pool.level-.002 ? pool.kind : 'asphalt';
 }

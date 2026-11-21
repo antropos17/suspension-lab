@@ -1,13 +1,15 @@
 import { createSimulationClient } from './simulation-client.js';
 import { FINISH, STEP } from './vehicle-constants.js';
 import { createExhaust } from './exhaust.js';
-import { groundHeight } from './terrain.js';
+import { createRoadScene } from './road-scene.js';
+import { createWheelSpray } from './wheel-spray.js';
+import { groundHeight, BRIDGES } from './terrain.js';
 import { drawClassicBody, drawWheelWells } from './car-art.js';
 import { createBakuBackdrop } from './baku-background.js';
 import { createSmokeRenderer } from './smoke-renderer.js';
 import { createDriveSlot, LINE_NAMES, testLineBoard } from './drive-slot.js';
 import { createSlotPanel } from './slot-panel.js';
-import { readGarage, advanceGarage, levelOf, THRESHOLDS, SYMBOLS, PART_NAMES, SPECIALS, purchase, buildSpec } from './garage.js';
+import { readGarage, advanceGarage, levelOf, THRESHOLDS, SYMBOLS, PART_NAMES, SPECIALS, ROAD_STOPS, claimRoadStops, purchase, buildSpec } from './garage.js';
 import { createGaragePanel } from './garage-panel.js';
 import { drawRim } from './part-art.js';
 import { createShop } from './shop.js';
@@ -18,6 +20,7 @@ const smokeCanvas=document.createElement('canvas'),smokeCtx=smokeCanvas.getConte
 const SMOKE_RESOLUTION=.5;
 const drawBaku=createBakuBackdrop(()=>{needsRedraw=true;});
 const drawSmoke=createSmokeRenderer();
+const drawRoad=createRoadScene(ctx), wheelSpray=createWheelSpray();
 // Opt-in, bounded diagnostics. No trace is collected during normal play.
 const profiling=new URLSearchParams(location.search).has('profile');
 const samples=[];
@@ -41,6 +44,19 @@ drawGarage(garage);drawShop(garage);
 let routePeak = garage.best, queuedPeak = garage.best, telemetryTime = 0, telemetrySpeed = 0;
 routePeak=Math.max(routePeak,profile.peak());
 $('best').textContent='Рекорд '+routePeak+' м';
+let collecting=false,roadReceipt='',receiptUntil=0;
+function collectRoadPay(meters){
+  const next=ROAD_STOPS[garage.roadStops];
+  if(collecting || !next || meters<next[0])return;
+  collecting=true;
+  Promise.resolve(transact(()=>{
+    const pay=claimRoadStops(garage,meters);
+    if(!pay.coins)return;
+    roadReceipt='Пост '+garage.roadStops+' · +'+pay.coins+' мон.'+(pay.gems?' · +'+pay.gems+' алм.':'');
+    receiptUntil=sim.elapsed+3;
+    drawShop(garage);
+  })).finally(()=>{collecting=false;});
+}
 function flushDistance() { profile.savePeak(routePeak); }
 function refreshBuild(changes,reels) {
   levels=garage.points.map(levelOf);spec=buildSpec(levels,garage.kits);
@@ -92,7 +108,7 @@ const presets = { comfort: [1.3, .4], trail: [1.7, .5], sport: [2.6, .65] };
 function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll('.held').forEach(b => b.classList.remove('held')); }
 function reset() {
   if(routePeak > queuedPeak) recordProgress(null,routePeak);
-  telemetryTime = telemetrySpeed = 0;
+  telemetryTime = telemetrySpeed = 0;wheelSpray.reset();receiptUntil=0;roadReceipt='';
   fitHighlights = [];
   slot.reset(); drawSlot(0, true);
   needsRedraw=true;
@@ -201,15 +217,8 @@ function line(points, color, thickness) {ctx.beginPath();points.forEach(([x,y],i
 function circle(x,y,r,fill,stroke,width=1) {ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.stroke();}}
 function scenery() {
   drawBaku(ctx,{width,height,camera,scale});
-  ctx.fillStyle='rgba(26,36,54,.17)';ctx.fillRect(0,0,width,height);
   const left = camera.x - width*.34/scale - 3, right = left + width/scale + 6;
-  const road=visibleGround(left,right).map(p=>[X(p.x),Y(p.y)]);
-  const soil=[[road[0][0],height+10],...road,[road.at(-1)[0],height+10]];
-  polygon(soil,'#746c57');
-  // All road paint lies below the collision surface, including its stroke.
-  ctx.save();ctx.beginPath();soil.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip();
-  line(road,'#cdb58c',12);line(road,'#a89c78',2);ctx.restore();
-  for(let i=Math.floor(left*2);i<right*2;i++) {const x=i*.5;circle(X(x),Y(groundHeight(x))+18+Math.abs(Math.sin(i*43))*70,1.2,'#a18e6e');}
+  drawRoad({X,Y,scale,left,right,height,ground:visibleGround(left,right),claimed:garage.roadStops});
   for(const [x,label] of [[1,'Старт'],[56,'Камень'],[118,'Подъём'],[333,'Перевал'],[498,'Спуск'],[663,'Гребень'],[FINISH+3,'Финиш']]) {
     if(x<left||x>right)continue;
     const px=X(x),py=Y(groundHeight(x));line([[px,py],[px,py-64]],'#58644d',3);ctx.fillStyle='#eae4bf';ctx.fillRect(px-23,py-78,58,23);ctx.fillStyle='#4c6148';ctx.font='11px Trebuchet MS';ctx.textAlign='center';ctx.fillText(label,px+6,py-62);
@@ -225,6 +234,16 @@ function spring(a,b) {
 function car() {
   const body=sim.body, pos=body.getPosition();
   const local=(x,y)=>body.getWorldPoint({x,y});
+  const lamp=local(1.98,-.04), high=local(5.75,.09),low=local(5.75,-.83);
+  const front=[X(lamp.x),Y(lamp.y)],end=[X(high.x),Y(high.y)];
+  const beam=ctx.createLinearGradient(...front,...end);
+  beam.addColorStop(0,'rgba(255,227,164,.28)');beam.addColorStop(.55,'rgba(245,216,142,.075)');beam.addColorStop(1,'rgba(245,216,142,0)');
+  const ground=visibleGround(Math.min(lamp.x,low.x,high.x)-.2,Math.max(lamp.x,low.x,high.x)+.2);
+  ctx.save();ctx.beginPath();ctx.moveTo(X(ground[0].x),-height);
+  for(const p of ground)ctx.lineTo(X(p.x),Y(p.y)+2);
+  ctx.lineTo(X(ground.at(-1).x),-height);ctx.closePath();ctx.clip();
+  polygon([[front[0],front[1]-2],end,[X(low.x),Y(low.y)],[front[0],front[1]+2]],beam);
+  ctx.restore();
   ctx.save();ctx.translate(X(pos.x),Y(pos.y));ctx.rotate(-body.getAngle());ctx.scale(scale,-scale);
   if(!xray)drawWheelWells(ctx);ctx.restore();
   sim.wheels.forEach((w,i)=>{
@@ -257,6 +276,11 @@ function car() {
     for(let j=0;j<4;j++){const a=j*Math.PI/2;circle(Math.cos(a)*r*.18,Math.sin(a)*r*.18,r*.035,'#4c574d','#d8d6c0',.6);}
     circle(0,0,r*.105,'#737f72','#d0d0b8',1);
     drawRim(ctx,wheelLevel,tire.rimRadius*scale);
+    if(sim.dirt>.01){
+      ctx.save();ctx.globalAlpha=sim.dirt*.8;
+      for(let k=0;k<19;k++){const a=k*2.4,d=r*(.43+.44*(k%7)/6);circle(Math.cos(a)*d,Math.sin(a)*d,Math.max(.8,r*.043),'#8a7151');}
+      ctx.restore();
+    }
     line([[r*.43,0],[r*.49,0]],'#18271f',2); // valve breaks rotational symmetry
     ctx.restore();
     if(levels[4]>=3){
@@ -267,7 +291,7 @@ function car() {
     }
   });
   ctx.save();ctx.translate(X(pos.x),Y(pos.y));ctx.rotate(-body.getAngle());ctx.scale(scale,-scale);
-  drawClassicBody(ctx,xray,exhaust.soot,levels,garage.kits);ctx.restore();
+  drawClassicBody(ctx,xray,exhaust.soot,levels,garage.kits,sim.dirt);ctx.restore();
   const tip=sim.exhaustMount.point,pipe=local(-1.68,-.42),can=local(-1.90,-.455+sim.exhaustMount.offset*.7);
   const pipeColor=['#6c5041','#786756','#979184','#a9b2ac','#b4bfbb','#ccd1c6','#7f7dba','#cc9a51'][levels[6]-1];
   line([[X(pipe.x),Y(pipe.y)],[X(can.x),Y(can.y)],[X(tip.x),Y(tip.y)]],pipeColor,3+levels[6]*.35);
@@ -333,7 +357,8 @@ function frame(now) {
     }
     sim.advance(dt, sim.elapsed < slot.autoUntil ? 1 : Number(forward)-Number(reverse), brake, boost);
     accumulator=Math.min(.05,accumulator+Math.max(0,sim.elapsed-smokeTime));smokeTime=sim.elapsed;
-    while(accumulator>=STEP-1e-10){exhaust.step(sim,STEP,spec.smokeFactor);accumulator-=STEP;}
+    while(accumulator>=STEP-1e-10){exhaust.step(sim,STEP,spec.smokeFactor);wheelSpray.step(sim,STEP);accumulator-=STEP;}
+    collectRoadPay(sim.body.getPosition().x-3);
     if(sim.body.getPosition().x>=FINISH+3){
       finished=true;
       const finalReward=slot.update(slot.ends,true);
@@ -349,7 +374,7 @@ function frame(now) {
   // Horizontal follow uses the same interpolated pose as every car component.
   // A lagging camera fighting discontinuous worker poses caused lateral shake.
   camera.x=pos.x;camera.y+=(pos.y-camera.y)*(1-Math.exp(-dt*3));
-  scenery();const sceneryEnd=profiling?performance.now():0;drawExhaust();const smokeEnd=profiling?performance.now():0;car();
+  scenery();const sceneryEnd=profiling?performance.now():0;drawExhaust();const smokeEnd=profiling?performance.now():0;car();wheelSpray.draw(ctx,X,Y,scale,groundHeight);
   needsRedraw=false;
   if(profiling)profileOutput.dataset.draws=String(++drawCount);
   if(now>=hudAt||paused||finished){hudAt=now+100;
@@ -367,6 +392,12 @@ function frame(now) {
   routePeak = Math.max(routePeak, Math.floor(distance));
   if (routePeak >= queuedPeak+25) recordProgress(null,routePeak);
   $('best').textContent = 'Рекорд '+routePeak+' м';
+  const nextPost=ROAD_STOPS[garage.roadStops];
+  $('road-pay').textContent=sim.elapsed<receiptUntil ? roadReceipt : nextPost ?
+    'До поста '+Math.max(0,Math.ceil(nextPost[0]-distance))+' м · +'+nextPost[1]+' мон.' : 'Все посты пройдены';
+  const surface=sim.wetKind.includes('mud')?'Грязь':sim.wetKind.includes('water')?'Лужа':
+    BRIDGES.some(([a,b])=>pos.x>=a && pos.x<=b)?'Мост':'Асфальт';
+  $('road-state').textContent=surface+' · грязь на кузове '+Math.round(sim.dirt*100)+'%';
   const span = sim.elapsed - telemetryTime;
   if (span > .025 || telemetryTime === 0) {
     const accel = span > .025 ? (signedSpeed-telemetrySpeed)/span : 0;

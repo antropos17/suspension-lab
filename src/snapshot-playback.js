@@ -4,7 +4,7 @@
 const mix=(a,b,t)=>a+(b-a)*t;
 function point(out,a,b,t){out.x=mix(a.x,b.x,t);out.y=mix(a.y,b.y,t);}
 function blend(out,a,b,t){
-  for(const key of ['elapsed','engineLoad','wheelPowerKW','accelerator','nitroCharge'])out[key]=mix(a[key],b[key],t);
+  for(const key of ['elapsed','engineLoad','wheelPowerKW','accelerator','nitroCharge','dirt'])out[key]=mix(a[key],b[key],t);
   out.boosting=t<.5?a.boosting:b.boosting;
   out.launchSeconds=t<1?a.launchSeconds:b.launchSeconds;
   point(out.body.position,a.body.position,b.body.position,t);
@@ -14,6 +14,8 @@ function blend(out,a,b,t){
   point(out.exhaustMount.velocity,a.exhaustMount.velocity,b.exhaustMount.velocity,t);
   out.exhaustMount.offset=mix(a.exhaustMount.offset,b.exhaustMount.offset,t);
   for(let i=0;i<2;i++){
+    out.spray[i]=mix(a.spray[i],b.spray[i],t);
+    out.wetKind[i]=t<.5?a.wetKind[i]:b.wetKind[i];
     point(out.wheels[i].position,a.wheels[i].position,b.wheels[i].position,t);
     // Planck angles are continuous, including multiple wheel revolutions.
     out.wheels[i].angle=mix(a.wheels[i].angle,b.wheels[i].angle,t);
