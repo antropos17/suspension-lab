@@ -83,7 +83,7 @@ details p {font-size:13px;line-height:1.45;max-width:72ch;margin:7px 0}
 #shop-items button {display:flex;align-items:center;text-align:left;gap:8px;background:#f0ede1;color:var(--ink);padding:6px}
 #shop-items button:disabled {background:#cbd1cf;color:#49555a}
 #shop-items small {display:block;font-size:11px;margin-top:3px}#shop-notice {margin-top:4px}
-.fit-chip {position:fixed;width:36px;z-index:20;pointer-events:none}.fit-tag {position:absolute;right:0;bottom:1px;background:var(--amber);color:var(--ink);font-size:11px;padding:3px 5px;border-radius:2px}
+.fit-tag {position:absolute;right:0;bottom:1px;background:var(--amber);color:var(--ink);font-size:11px;padding:3px 5px;border-radius:2px}
 .manual-settings {margin:12px 0;font-size:14px}.workbench {display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:25px;margin:14px 0}.workbench h2 {font-size:22px}.workbench input{width:100%;accent-color:#713b46}
 .workbench label,.workbench .range-labels,.suspension-readout {display:flex;justify-content:space-between;gap:8px}.workbench .range-labels,.workbench small {font-size:11px}.intro button,.soot-control,.tuning label,.setup>span,.suspension-readout {margin-top:10px}.setup>span{display:block}.setup button{padding:6px;font-size:12px}.selected,.intro [aria-pressed=true] {background:#67404a;color:white}.suspension-readout meter{width:50px}
 footer {font-size:11px;color:#49565d}footer i {display:inline-block;width:8px}

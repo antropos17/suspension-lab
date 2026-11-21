@@ -211,3 +211,11 @@ The starting courtyard has an illustrated stone house, open garage and physical 
 Browser checks confirmed the initial 0/800 m, 64/64 build and 205 PS readouts, and the station notice after driving from the courtyard. The HTML, both JavaScript bundles and both new WebP assets matched the files served at port 4187 byte for byte.
 
 All 50 tests, syntax checks, bundled build and the contact-ring skill bench passed. Each drive completed the 800 m course at full tune and continuous throttle without nitro or inversion. The browser checks cover the garage and first station. The full-course and tire-pressure comparisons ran in the physics harness.
+
+## 2026-11-21 · Workshop fitting animations
+
+A winning part line now shows a short, vehicle-mounted fitting sequence. Each of the eight assemblies has its own motion, and the callout uses the actual slot artwork for the previous and newly installed level. The body finish is revealed across the moving sedan. Multiple installations play in order on simulation time. Reduced motion shows a static mounted part and its level. Currency payouts keep their own receipt.
+
+An isolated Edge test garage exercised all eight part lines through the normal settlement path, a compressor order, an engine upgrade with reduced motion and a coin win. A deterministic two-line spin at a 390 px viewport showed the engine before the transmission, held the sequence during pause and cleared it on reset. Visual review covered the engine, wheel fitting, moving body-finish boundary and the narrow-screen callout. The recording in work/fitting-preview.webp contains three browser sequences.
+
+All 50 tests, syntax checks and the bundled build passed. The loopback server returned the final JavaScript and stylesheet byte for byte.

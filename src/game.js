@@ -11,6 +11,7 @@ import { createDriveSlot, LINE_NAMES, testLineBoard } from './drive-slot.js';
 import { createSlotPanel } from './slot-panel.js';
 import { readGarage, advanceGarage, levelOf, THRESHOLDS, SYMBOLS, PART_NAMES, SPECIALS, ROAD_STOPS, claimRoadStops, purchase, buildSpec } from './garage.js';
 import { createGaragePanel } from './garage-panel.js';
+import { drawFitting, FIT_SECONDS } from './fitting.js';
 import { drawRim } from './part-art.js';
 import { createShop } from './shop.js';
 import { createGarageProfile } from './garage-profile.js';
@@ -38,7 +39,7 @@ const testMode=new URLSearchParams(location.search).get('garage')==='test';
 const profile=createGarageProfile(testMode);
 let storageAvailable=true;
 let garage=profile.load(), levels=garage.points.map(levelOf), spec=buildSpec(levels,garage.kits);
-let fitHighlights = [], fittedAt = 0;
+const fittings=[];
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const drawGarage = createGaragePanel($('rack-left'), $('rack-right'), $('build-level'));
 const drawShop=createShop($('shop-items'),$('wallet'),buyItem);
@@ -64,13 +65,20 @@ function collectRoadPay(meters){
   })).finally(()=>{collecting=false;});
 }
 function flushDistance() { profile.savePeak(routePeak); }
-function refreshBuild(changes,reels) {
+function refreshBuild(changes,installed=[]) {
   levels=garage.points.map(levelOf);spec=buildSpec(levels,garage.kits);
   sim?.setBuild(levels,garage.kits);
-  if(changes?.some(c=>c.to>c.from) && !reduceMotion.matches) {
-    fittedAt=sim.elapsed;fitHighlights=changes.flatMap((c,i)=>c.to>c.from ? [i] : []);
+  if(changes){
+    for(const [part,{from,to}] of changes.entries()){
+      const kit=SPECIALS.find(k=>k.part===part && installed.includes(k.name));
+      if(to===from && !kit)continue;
+      const last=fittings.at(-1);
+      const start=Math.max(sim.elapsed,last ? last.start+FIT_SECONDS : 0);
+      fittings.push({part,from,to,start,kit,label:kit?.name ?? PART_NAMES[part],
+        detail:to>from ? 'Уровень '+from+' → '+to : 'Комплект установлен'});
+    }
   }
-  drawGarage(garage,changes,reels);drawShop(garage);needsRedraw=true;
+  drawGarage(garage,changes);drawShop(garage);needsRedraw=true;
 }
 function transact(change) {
   const apply=()=>{
@@ -94,7 +102,7 @@ function recordProgress(reward, meters) {
     const {changes,installed}=advanceGarage(garage,meters,reward);
     if(reward){
       reward.receipt=[...changes.flatMap((c,i)=>c.to>c.from ? [PART_NAMES[i]+' '+c.from+'→'+c.to] : []),...installed].join(', ');
-      refreshBuild(changes,$('slot-bank'));
+      refreshBuild(changes,installed);
     }
   });
 }
@@ -115,7 +123,7 @@ function clearInput() { keys.clear(); touches.clear(); document.querySelectorAll
 function reset() {
   if(routePeak > queuedPeak) recordProgress(null,routePeak);
   telemetryTime = telemetrySpeed = 0;wheelSpray.reset();receiptUntil=0;roadReceipt='';
-  fitHighlights = [];
+  fittings.length=0;
   slot.reset(); drawSlot(0, true);
   needsRedraw=true;
   samples.length=0;profileTicks=0;drawCount=0;
@@ -243,6 +251,9 @@ function spring(a,b) {
 }
 function car() {
   const body=sim.body, pos=body.getPosition();
+  while(fittings.length && sim.elapsed>=fittings[0].start+FIT_SECONDS)fittings.shift();
+  const fitting=fittings[0];
+  const phase=reduceMotion.matches ? .8 : fitting ? Math.max(0,(sim.elapsed-fitting.start)/FIT_SECONDS) : 0;
   const local=(x,y)=>body.getWorldPoint({x,y});
   const lamp=local(1.98,-.04), high=local(5.75,.09),low=local(5.75,-.83);
   const front=[X(lamp.x),Y(lamp.y)],end=[X(high.x),Y(high.y)];
@@ -312,7 +323,16 @@ function car() {
     }
   });
   ctx.save();ctx.translate(X(pos.x),Y(pos.y));ctx.rotate(-body.getAngle());ctx.scale(scale,-scale);
-  drawClassicBody(ctx,xray,exhaust.soot,levels,garage.kits,sim.dirt);ctx.restore();
+  if(fitting?.part===5 && phase<.70){
+    const edge=2.12-4.24*Math.min(1,Math.max(0,(phase-.06)/.64));
+    const oldLevels=levels.slice();oldLevels[5]=fitting.from;
+    const oldKits=garage.kits.slice();if(fitting.kit)oldKits[2]=false;
+    for(const [left,right,stages,kits] of [[-3,edge,oldLevels,oldKits],[edge,3,levels,garage.kits]]){
+      ctx.save();ctx.beginPath();ctx.rect(left,-2,right-left,4);ctx.clip();
+      drawClassicBody(ctx,xray,exhaust.soot,stages,kits,sim.dirt);ctx.restore();
+    }
+  }else drawClassicBody(ctx,xray,exhaust.soot,levels,garage.kits,sim.dirt);
+  ctx.restore();
   const tip=sim.exhaustMount.point,pipe=local(-1.68,-.42),can=local(-1.90,-.455+sim.exhaustMount.offset*.7);
   const pipeColor=['#6c5041','#786756','#979184','#a9b2ac','#b4bfbb','#ccd1c6','#7f7dba','#cc9a51'][levels[6]-1];
   line([[X(pipe.x),Y(pipe.y)],[X(can.x),Y(can.y)],[X(tip.x),Y(tip.y)]],pipeColor,3+levels[6]*.35);
@@ -334,25 +354,7 @@ function car() {
     ctx.restore();
   }
   if(xray)sim.rims.forEach((w,i)=>spring(local(i===0?-1.25:1.25,-.05),w.getPosition()));
-  if(fitHighlights.length){
-    const age = (sim.elapsed-fittedAt)/1.2;
-    if(age>=1) fitHighlights=[];
-    else {
-      ctx.save();
-      ctx.globalAlpha = 1-Math.max(0,age);
-      ctx.strokeStyle='#ffe5a1';ctx.lineWidth=2;
-      for(const part of fitHighlights){
-        const hubs = sim.rims.map(r=>r.getPosition());
-        const locations = part===2 || part===4 ? hubs : part===3 ? [local(-1.25,-.07),local(1.25,-.07)] :
-          [part===0 ? local(1.37,.23) : part===1 ? local(.45,-.12) : part===6 ? tip : part===7 ? local(-.83,.54) : local(-.54,.23)];
-        for(const p of locations){
-          const radius = scale*((part===2?.44:.19)+.27*age);
-          ctx.beginPath();ctx.arc(X(p.x),Y(p.y),radius,0,Math.PI*2);ctx.stroke();
-        }
-      }
-      ctx.restore();
-    }
-  }
+  if(fitting)drawFitting(ctx,fitting,phase,sim,X,Y,scale,width,height);
 }
 function frame(now) {
   const start=profiling?performance.now():0;

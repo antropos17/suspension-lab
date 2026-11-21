@@ -10,8 +10,18 @@ export function paintIcon(el, id, level=1) {
   el.style.backgroundPosition=token ? (id-8)*100+'% 0' : cell%4*100/3+'% '+Math.floor(cell/4)*100/3+'%';
 }
 
-const rims=new Image();
-rims.src='assets/traction.webp';
+const artwork=sheets.map(name=>{
+  const image=new Image();image.src='assets/'+name+'.webp';return image;
+});
+const rims=artwork[1];
+
+export function drawPartSample(ctx,id,level,x,y,size){
+  const sheet=artwork[Math.floor(id/2)];
+  if(!sheet.naturalWidth)return;
+  const cell=(id%2)*8+level-1,w=sheet.naturalWidth/4,h=sheet.naturalHeight/4;
+  ctx.drawImage(sheet,(cell%4)*w,Math.floor(cell/4)*h,w,h,x,y,size,size);
+}
+
 export function drawRim(ctx, level, radius) {
   if(!rims.naturalWidth) return;
   const cell=rims.naturalWidth/4, index=level-1, size=cell*.82;

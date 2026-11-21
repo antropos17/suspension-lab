@@ -16,7 +16,7 @@ export function createGaragePanel(left, right, title) {
     (i < 4 ? left : right).append(card);
     return card;
   });
-  return function draw(garage, changes, reels) {
+  return function draw(garage, changes) {
     const levels = garage.points.map(levelOf);
     const spec = buildSpec(levels,garage.kits);
     const ratings = {
@@ -59,21 +59,11 @@ export function createGaragePanel(left, right, title) {
       const flash = tag.animate([{opacity:1},{opacity:1,offset:.8},{opacity:0}],{duration:2100});
       flash.onfinish = () => tag.remove();
       if (reduced) return;
-      const source = reels?.querySelector('.payline[data-result="'+i+'"]');
-      if (!source) return;
-      const start = source.getBoundingClientRect(), end = card.querySelector('i').getBoundingClientRect();
-      const chip = document.createElement('i');
-      chip.className = 'part-icon fit-chip';
-      paintIcon(chip,i,to);
-      chip.style.left = start.left+start.width/2-18+'px';
-      chip.style.top = start.top+start.height/2-18+'px';
-      document.body.append(chip);
-      const dx = end.left+end.width/2-start.left-start.width/2;
-      const dy = end.top+end.height/2-start.top-start.height/2;
-      const travel = chip.animate([{transform:'translate(0,0) scale(1.1)'},{transform:'translate('+dx+'px,'+dy+'px) scale(.75)'}],
-        {duration:480,easing:'cubic-bezier(.22,.6,.35,1)'});
-      travel.onfinish = () => chip.remove();
-      card.animate([{boxShadow:'inset 0 0 0 2px #ffcd76'},{boxShadow:'inset 0 0 0 0 transparent'}],{duration:1050,delay:350});
+      card.querySelector('i').animate([
+        {transform:'translateY(-5px) rotate(-6deg)'},
+        {transform:'translateY(1px) rotate(1deg)',offset:.72},
+        {transform:'none'}
+      ],{duration:240,easing:'ease-out'});
     });
   };
 }
