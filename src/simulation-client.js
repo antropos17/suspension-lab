@@ -4,7 +4,7 @@ import { createSnapshotPlayback } from './snapshot-playback.js';
 
 // At most one worker job is in flight. New input replaces queued input rather
 // than building a message backlog. Reset generations reject stale replies.
-export function createSimulationClient(worker=new Worker('/physics-worker.js')) {
+export function createSimulationClient(worker=new Worker('physics-worker.js')) {
   let state, generation=0, pending=false, accumulator=0, settings={};
   const client={ready:false,error:null,workerMs:0};
   const playback=createSnapshotPlayback();
