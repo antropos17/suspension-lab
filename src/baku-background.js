@@ -19,7 +19,7 @@ function makeRail(){
  return tile;
 }
 export function createBakuBackdrop(invalidate=()=>{}){
- const panorama=new Image();panorama.src='/assets/baku-panorama.png';panorama.decoding='async';
+ const panorama=new Image();panorama.src='assets/baku-panorama.png';panorama.decoding='async';
  panorama.onload=invalidate;
  const wash=document.createElement('canvas'),rail=makeRail();let cachedWidth=0,cachedHeight=0,twilight;
  return function drawBaku(c,{width,height,camera,scale}){
